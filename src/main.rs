@@ -1,7 +1,33 @@
-use std::str::from_utf8;
+mod errors;
 
-use actix_web::http::{header::{HeaderName, HeaderValue}, StatusCode};
+use std::{fs::File, str::from_utf8};
+
+use actix_web::{http::{header::{HeaderName, HeaderValue}, StatusCode}, web::{self, Data}, App, HttpResponse, HttpServer};
 use anyhow::anyhow;
+use clap::Parser;
+use errors::MyResult;
+use serde_derive::Deserialize;
+
+use crate::errors::MyError;
+
+#[derive(clap::Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(short, long="config", default_value="config.json")]
+    config_file: String,
+}
+
+
+#[derive(Deserialize, Debug)]
+struct Config {
+    #[serde(default="default_port")]
+    port: u16,
+    our_secret: Option<String>, // simple Bearer authentication // TODO: Don't authenticate with bearer, if uses another auth.
+}
+
+fn default_port() -> u16 {
+    8080
+}
 
 // Two similar functions with different data types follow:
 
@@ -54,7 +80,54 @@ fn deserialize_http_response(data: &[u8]) -> anyhow::Result<actix_web::HttpRespo
     Ok(response)
 }
 
-#[actix::main]
-async fn main() {
-    println!("Hello, world!");
+// FIXME
+async fn serve(req: actix_web::HttpRequest, body: web::Bytes) -> MyResult<actix_web::HttpResponse> {
+    let target_url = ""; // FIXME
+
+    // let mut builder = client
+    //     .request_from(req.path(), req.head())
+    //     .no_decompress();
+
+    if let Some(addr) = req.head().peer_addr {
+        // builder = builder.header("X-Forwarded-For", addr.ip().to_string());
+    }
+
+    // let res = builder.send_body(body.into()).await?;
+
+    Ok(actix_web::HttpResponse::build(res.status())
+        .append_header(("X-Proxied", "true"))
+        .streaming(res))
+}
+
+async fn proxy(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Config>) -> MyResult<actix_web::HttpResponse> {
+    if let Some(our_secret) = config.our_secret {
+        let passed_key = req.headers()
+            .get("x-joinproxy-key")
+            .map(|v| v.to_str().map_err(|_| anyhow!("Cannot read header X-JoinProxy-Key")))
+            .transpose()?;
+        if passed_key != Some(&("Bearer ".to_string() + &our_secret)) {
+            return Ok(HttpResponse::new(StatusCode::NETWORK_AUTHENTICATION_REQUIRED));
+        }
+    }
+
+    serve(req, body).await
+}
+
+#[actix_web::main]
+async fn main() -> MyResult<()> {
+    let args = Args::parse();
+    let mut file = File::open(args.config_file)
+        .map_err(|e| anyhow!("Cannot open config file {}: {}", args.config_file, e))?;
+    let config: Config = serde_json::from_reader(file)
+        .map_err(|e| anyhow!("Cannot read config file {}: {}", args.config_file, e))?;
+
+    let server_url = "localhost:".to_string() + config.port.to_string().as_str();
+    HttpServer::new(|| App::new().service(
+        web::scope("")
+            .app_data(Data::new(config))
+            .route("/{_:.*}", web::route().to(proxy)))
+    )
+        .bind(server_url)?
+        .run()
+        .await
 }
