@@ -1,0 +1,8 @@
+[package]
+name = "passthrough-proxy-rust"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+actix = "0.13.3"
+reqwest = "0.12.4"
