@@ -3,19 +3,29 @@ use thiserror::Error;
 use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug, Error)]
-pub struct MyError {
-    err: Box<anyhow::Error>,
+pub enum MyError {
+    Anyhow(Box<anyhow::Error>),
+    Io(std::io::Error),
 }
 
 impl Display for MyError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        Debug::fmt(&*self.err, f)
+        match self {
+            Self::Anyhow(e) => Debug::fmt(&*e, f),
+            Self::Io(e) => Debug::fmt(&*e, f),
+        }
     }
 }
 
 impl From<anyhow::Error> for MyError {
-    fn from(err: anyhow::Error) -> MyError {
-        MyError { err: Box::new(err) }
+    fn from(err: anyhow::Error) -> Self {
+        Self::Anyhow(Box::new(err))
+    }
+}
+
+impl From<std::io::Error> for MyError {
+    fn from(err: std::io::Error) -> Self {
+        Self::Io(err)
     }
 }
 
@@ -32,7 +42,7 @@ impl ResponseError for MyError {
     fn error_response(&self) -> HttpResponse {
         HttpResponse::build(self.status_code())
             .insert_header(ContentType::plaintext())
-            .body(format!("{}\n{}", self.to_string(), self.err.backtrace()))
+            .body(format!("{}", self.to_string()))
     }
 }
 

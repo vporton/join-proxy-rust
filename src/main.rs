@@ -8,8 +8,6 @@ use clap::Parser;
 use errors::MyResult;
 use serde_derive::Deserialize;
 
-use crate::errors::MyError;
-
 #[derive(clap::Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -18,7 +16,7 @@ struct Args {
 }
 
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 struct Config {
     #[serde(default="default_port")]
     port: u16,
@@ -100,7 +98,7 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes) -> MyResult<actix_
 }
 
 async fn proxy(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Config>) -> MyResult<actix_web::HttpResponse> {
-    if let Some(our_secret) = config.our_secret {
+    if let Some(our_secret) = &config.our_secret {
         let passed_key = req.headers()
             .get("x-joinproxy-key")
             .map(|v| v.to_str().map_err(|_| anyhow!("Cannot read header X-JoinProxy-Key")))
@@ -116,18 +114,18 @@ async fn proxy(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
 #[actix_web::main]
 async fn main() -> MyResult<()> {
     let args = Args::parse();
-    let mut file = File::open(args.config_file)
+    let file = File::open(&args.config_file)
         .map_err(|e| anyhow!("Cannot open config file {}: {}", args.config_file, e))?;
     let config: Config = serde_json::from_reader(file)
         .map_err(|e| anyhow!("Cannot read config file {}: {}", args.config_file, e))?;
 
     let server_url = "localhost:".to_string() + config.port.to_string().as_str();
-    HttpServer::new(|| App::new().service(
+    HttpServer::new(move || App::new().service(
         web::scope("")
-            .app_data(Data::new(config))
+            .app_data(Data::new(config.clone()))
             .route("/{_:.*}", web::route().to(proxy)))
     )
         .bind(server_url)?
         .run()
-        .await
+        .await.map_err(|e| e.into())
 }
