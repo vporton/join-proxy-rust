@@ -1043,6 +1043,7 @@ dependencies = [
  "actix",
  "actix-web",
  "anyhow",
+ "bytes",
  "reqwest",
 ]
 
