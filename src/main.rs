@@ -45,7 +45,7 @@ fn deserialize_http_response(data: &[u8]) -> anyhow::Result<actix_web::HttpRespo
 
     let headers = response.headers_mut();
     for header_str in headers_bytes.split(|&c| c == b'\r') {
-        let mut iter2 = header_str.splitn(2, |&c| c == b'\r'); // TODO: error, if longer than 2
+        let mut iter2 = header_str.splitn(2, |&c| c == b'\r');
         let k = iter2.next().ok_or_else(|| anyhow!("Wrong data in DB."))?;
         let v = iter2.next().ok_or_else(|| anyhow!("Wrong data in DB."))?;
         headers.append(HeaderName::from_bytes(k)?, HeaderValue::from_bytes(v)?);
