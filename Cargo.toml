@@ -16,4 +16,5 @@ reqwest = { version = "0.12.4", features = ["default-tls", "http2", "macos-syste
 serde = "1.0.201"
 serde_derive = "1.0.201"
 serde_json = "1.0.117"
+sha2 = "0.10.8"
 thiserror = "1.0.60"

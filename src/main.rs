@@ -3,13 +3,15 @@ mod cache;
 
 use std::{collections::HashMap, fs::File, str::{from_utf8, FromStr}, sync::{Arc, Mutex}, time::Duration};
 
+use sha2::Digest;
 use actix_web::{body::BoxBody, http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
 use anyhow::anyhow;
-use cache::cache::{Cache, Key};
+use cache::cache::{Cache, Key, Value};
 use clap::Parser;
 use errors::MyResult;
 use reqwest::Client;
 use serde_derive::Deserialize;
+use sha2::Sha256;
 
 use crate::cache::mem_cache::MemCache;
 
@@ -156,25 +158,29 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
     } else {
         let client = Client::new(); // TODO: Cache. // TODO: No duplicate variable
         let reqwest = prepare_request(&req, &body, &config).await?;
-        let response = client.execute(reqwest).await?;
+        let reqwest_response = client.execute(reqwest).await?;
 
         let mut actix_response = actix_web::HttpResponse::with_body(
-            StatusCode::from_u16(response.status().as_u16())?, Vec::from(body.as_ref())); // TODO: Don't copy `Vec`
-
-        // cache.put() // TODO
+            StatusCode::from_u16(reqwest_response.status().as_u16())?, Vec::from(body.as_ref())); // TODO: Don't copy `Vec`
 
         let headers = actix_response.headers_mut();
-        for (k, v) in response.headers() {
+        for (k, v) in reqwest_response.headers() {
             headers.append(
                 http_for_actix::HeaderName::from_str(k.as_str()).map_err(|_| anyhow!("Invalid header name."))?,
                 http_for_actix::HeaderValue::from_str(v.to_str()?).map_err(|_| anyhow!("Invalid header value."))?,
             );
         }
+
+        // TODO: After which headers modifications to put this block?
+        let hash = Sha256::digest(serialized_request.as_slice());
+        // TODO: Eliminate `clone()`.
+        cache.put(Key(&hash), Value(serialize_http_response(reqwest_response, body.clone())?.as_slice()), config.cache_timeout)?;
+
+
         actix_response.headers_mut().append(
             http_for_actix::HeaderName::from_str("X-JoinProxy-Response").unwrap(),
             http_for_actix::HeaderValue::from_str("Miss").unwrap(),
         );
-
         //  http://tools.ietf.org/html/rfc2616#section-13.5.1
         let hop_by_hop = ["connection", "keep-alive", "te", "trailers", "transfer-encoding", "upgrade"];
         let headers_to_remove = // TODO: Calculate once.
@@ -200,7 +206,7 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
     };
 
     Ok(actix_web::HttpResponse::build(StatusCode::from_u16(response.status().as_u16())?)
-        .body(Vec::from(body.clone().as_ref()))) // TODO: streaming // TODO: Don't copy `Vec`
+        .body(Vec::from(body.as_ref()))) // TODO: streaming // TODO: Don't copy `Vec`
 }
 
 async fn proxy(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Config>, cache: Data<Arc<Mutex<&mut dyn Cache>>>)
