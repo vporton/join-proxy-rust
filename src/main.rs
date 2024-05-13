@@ -22,6 +22,7 @@ struct Config {
     #[serde(default="default_port")]
     port: u16,
     our_secret: Option<String>, // simple Bearer authentication // TODO: Don't authenticate with bearer, if uses another auth.
+    upstream_prefix: Option<String>,
 }
 
 fn default_port() -> u16 {
@@ -80,26 +81,28 @@ fn deserialize_http_response(data: &[u8]) -> anyhow::Result<actix_web::HttpRespo
 }
 
 // FIXME
-async fn serve(req: actix_web::HttpRequest, body: web::Bytes) -> MyResult<actix_web::HttpResponse> {
-    let target_url = ""; // FIXME
+async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Config>) -> MyResult<actix_web::HttpResponse> {
+    let url_prefix = if let Some(upstream_prefix) = &config.upstream_prefix {
+        upstream_prefix.clone()
+    } else {
+        let host = req.headers().get("host")
+            .ok_or_else(|| anyhow!("Missing both upstream_prefix in config and Host: header"))?
+            .to_str()?;
+        "https://".to_string() + host
+    };
+    let url = url_prefix + req.path();
 
-    // let mut builder = client
-    //     .request_from(req.path(), req.head())
-    //     .no_decompress();
     let method = reqwest::Method::from_bytes(req.method().as_str().as_bytes())?;
     // TODO: .timeout()
     let client = Client::new(); // TODO: Cache.
-    let reqwest = client.request(method, target_url)/*.headers(headers)*/.body(body).build()?;
+    let reqwest = client.request(method, url)/*.headers(headers)*/.body(body).build()?;
     let response = client.execute(reqwest).await?;
 
-    if let Some(addr) = req.head().peer_addr {
+    if let Some(addr) = req.head().peer_addr { // TODO
         // builder = builder.header("X-Forwarded-For", addr.ip().to_string());
     }
 
-    // let res = builder.send_body(body.into()).await?;
-
     Ok(actix_web::HttpResponse::build(StatusCode::from_u16(response.status().as_u16())?)
-        .append_header(("X-Proxied", "true"))
         .body(response.bytes().await?)) // TODO: streaming
 }
 
@@ -114,7 +117,7 @@ async fn proxy(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
         }
     }
 
-    serve(req, body).await
+    serve(req, body, config).await
 }
 
 #[actix_web::main]
