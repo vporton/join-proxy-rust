@@ -14,7 +14,7 @@ impl MemCache {
     pub fn new() -> Self {
         Self {
             data: HashMap::new(),
-            put_times: BTreeMap::new(),
+            put_times: BTreeMap::new(), // FIXME: In theory, multiple items may have the same time.
         }
     }
 }
