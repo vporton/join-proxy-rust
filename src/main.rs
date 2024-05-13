@@ -150,7 +150,7 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
         cache.get(Key(serialized_request.as_slice()), config.cache_timeout)?
     {
         let mut response = deserialize_http_response(serialize_response)?;
-        response.headers_mut().append(
+        response.headers_mut().append( // TODO: Hit/Miss marks are a disturbance for IC consensus (but a useful debugging aid).
             http_for_actix::HeaderName::from_str("X-JoinProxy-Response").unwrap(),
             http_for_actix::HeaderValue::from_str("Hit").unwrap(),
         );
