@@ -8,7 +8,7 @@ use actix_web::{body::BoxBody, http::StatusCode, web::{self, Data}, App, HttpRes
 use anyhow::anyhow;
 use cache::cache::{Cache, Key, Value};
 use clap::Parser;
-use errors::MyResult;
+use errors::{InvalidHeaderNameError, InvalidHeaderValueError, MyCorruptedDBError, MyResult};
 use reqwest::ClientBuilder;
 use serde_derive::Deserialize;
 use sha2::Sha256;
@@ -94,10 +94,9 @@ fn serialize_http_response(response: reqwest::Response, bytes: bytes::Bytes) -> 
 
 fn deserialize_http_response(data: &[u8]) -> anyhow::Result<actix_web::HttpResponse<Vec<u8>>> {
     let mut iter1 = data.splitn(3, |&c| c == b'\n');
-    // TODO: Eliminate duplicate error messages.
-    let status_code_bytes = iter1.next().ok_or_else(|| anyhow!("Wrong data in DB."))?;
-    let headers_bytes = iter1.next().ok_or_else(|| anyhow!("Wrong data in DB."))?;
-    let body = iter1.next().ok_or_else(|| anyhow!("Wrong data in DB."))?;
+    let status_code_bytes = iter1.next().ok_or_else(|| MyCorruptedDBError::default())?;
+    let headers_bytes = iter1.next().ok_or_else(|| MyCorruptedDBError::default())?;
+    let body = iter1.next().ok_or_else(|| MyCorruptedDBError::default())?;
 
     let status_code: u16 = str::parse(from_utf8(status_code_bytes)?)?;
     let mut response = actix_web::HttpResponse::with_body(
@@ -106,8 +105,8 @@ fn deserialize_http_response(data: &[u8]) -> anyhow::Result<actix_web::HttpRespo
     let headers = response.headers_mut();
     for header_str in headers_bytes.split(|&c| c == b'\r') {
         let mut iter2 = header_str.splitn(2, |&c| c == b'\r');
-        let k = iter2.next().ok_or_else(|| anyhow!("Wrong data in DB."))?;
-        let v = iter2.next().ok_or_else(|| anyhow!("Wrong data in DB."))?;
+        let k = iter2.next().ok_or_else(|| MyCorruptedDBError::default())?;
+        let v = iter2.next().ok_or_else(|| MyCorruptedDBError::default())?;
         headers.append(http_for_actix::HeaderName::from_bytes(k)?, http_for_actix::HeaderValue::from_bytes(v)?);
     }
 
@@ -139,8 +138,8 @@ async fn prepare_request(req: &actix_web::HttpRequest, body: &web::Bytes, config
         request_headers
             .map(|h| -> MyResult<_> {
                 Ok((
-                    http::HeaderName::from_str(h.0.as_str()).map_err(|_| anyhow!("Invalid header name."))?,
-                    http::HeaderValue::from_str(h.1.to_str()?).map_err(|_| anyhow!("Invalid header value."))?
+                    http::HeaderName::from_str(h.0.as_str()).map_err(|_| InvalidHeaderNameError::default())?,
+                    http::HeaderValue::from_str(h.1.to_str()?).map_err(|_| InvalidHeaderValueError::default())?
                 ))
             })
             .into_iter()
@@ -184,8 +183,8 @@ async fn serve(
         let headers = actix_response.headers_mut();
         for (k, v) in reqwest_response.headers() {
             headers.append(
-                http_for_actix::HeaderName::from_str(k.as_str()).map_err(|_| anyhow!("Invalid header name."))?,
-                http_for_actix::HeaderValue::from_str(v.to_str()?).map_err(|_| anyhow!("Invalid header value."))?,
+                http_for_actix::HeaderName::from_str(k.as_str()).map_err(|_| InvalidHeaderNameError::default())?,
+                http_for_actix::HeaderValue::from_str(v.to_str()?).map_err(|_| InvalidHeaderValueError::default())?,
             );
         }
 
@@ -211,8 +210,8 @@ async fn serve(
         }
         for (k, v) in config.add_response_headers.iter() {
             actix_response.headers_mut().append(
-                http_for_actix::HeaderName::from_str(k).map_err(|_| anyhow!("Invalid header name."))?,
-                http_for_actix::HeaderValue::from_str(&v).map_err(|_| anyhow!("Invalid header value."))?
+                http_for_actix::HeaderName::from_str(k).map_err(|_| InvalidHeaderNameError::default())?,
+                http_for_actix::HeaderValue::from_str(&v).map_err(|_| InvalidHeaderValueError::default())?
             );
         }
 
@@ -262,8 +261,8 @@ async fn main() -> MyResult<()> {
     let additional_response_headers = additional_response_headers.into_iter().map(
         |v| -> MyResult<_> {
             Ok((
-                http_for_actix::HeaderName::from_str(&v.0).map_err(|_| anyhow!("Invalid header name."))?,
-                http_for_actix::HeaderValue::from_str(&v.1).map_err(|_| anyhow!("Invalid header value."))?
+                http_for_actix::HeaderName::from_str(&v.0).map_err(|_| InvalidHeaderNameError::default())?,
+                http_for_actix::HeaderValue::from_str(&v.1).map_err(|_| InvalidHeaderValueError::default())?
             ))
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -274,7 +273,7 @@ async fn main() -> MyResult<()> {
     let response_headers_to_remove =
         hop_by_hop.into_iter()
             .chain(config.remove_response_headers.iter().map(|s| s.as_str()))
-            .map(|h| http_for_actix::HeaderName::from_str(h).map_err(|_| anyhow!("Invalid header name.").into()));
+            .map(|h| http_for_actix::HeaderName::from_str(h).map_err(|_| InvalidHeaderNameError::default().into()));
     let response_headers_to_remove = response_headers_to_remove.collect::<MyResult<Vec<_>>>()?;
     let response_headers_to_remove = Arc::new(response_headers_to_remove);
 

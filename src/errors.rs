@@ -14,6 +14,9 @@ pub enum MyError {
     HeaderToStrForActix(http_for_actix::header::ToStrError),
     HeaderToStr(http::header::ToStrError),
     // InvalidHeaderName(Box<http_for_actix::header::IntoHeaderName>),
+    MyCorruptedDB(MyCorruptedDBError),
+    InvalidHeaderName(InvalidHeaderNameError),
+    InvalidHeaderValue(InvalidHeaderValueError),
 }
 
 impl Display for MyError {
@@ -28,7 +31,37 @@ impl Display for MyError {
             Self::HeaderToStrForActix(e) => Debug::fmt(&*e, f),
             Self::HeaderToStr(e) => Debug::fmt(&*e, f),
             // Self::InvalidHeaderName(e) => Debug::fmt(&*e, f),
+            Self::MyCorruptedDB(e) => Debug::fmt(&*e, f),
+            Self::InvalidHeaderName(e) => Debug::fmt(&*e, f),
+            Self::InvalidHeaderValue(e) => Debug::fmt(&*e, f),
         }
+    }
+}
+
+#[derive(Debug, Default, Error)]
+pub struct MyCorruptedDBError {}
+
+impl Display for MyCorruptedDBError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Wrong data in DB.")
+    }
+}
+
+#[derive(Debug, Default, Error)]
+pub struct InvalidHeaderNameError {}
+
+impl Display for InvalidHeaderNameError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Invalid header name.")
+    }
+}
+
+#[derive(Debug, Default, Error)]
+pub struct InvalidHeaderValueError {}
+
+impl Display for InvalidHeaderValueError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Invalid header value.")
     }
 }
 
@@ -85,6 +118,24 @@ impl From<http::header::ToStrError> for MyError {
 //         Self::InvalidHeaderName(err)
 //     }
 // }
+
+impl From<MyCorruptedDBError> for MyError {
+    fn from(err: MyCorruptedDBError) -> Self {
+        Self::MyCorruptedDB(err)
+    }
+}
+
+impl From<InvalidHeaderNameError> for MyError {
+    fn from(err: InvalidHeaderNameError) -> Self {
+        Self::InvalidHeaderName(err)
+    }
+}
+
+impl From<InvalidHeaderValueError> for MyError {
+    fn from(err: InvalidHeaderValueError) -> Self {
+        Self::InvalidHeaderValue(err)
+    }
+}
 
 impl ResponseError for MyError {
     fn status_code(&self) -> StatusCode {
