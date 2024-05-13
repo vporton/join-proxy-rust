@@ -46,6 +46,10 @@ fn default_show_hit_miss() -> bool {
     true
 }
 
+struct State {
+    client: reqwest::Client,
+}
+
 // Two similar functions with different data types follow:
 
 fn serialize_http_request(request: &actix_web::HttpRequest, bytes: &actix_web::web::Bytes) -> anyhow::Result<Vec<u8>> {
@@ -96,7 +100,7 @@ fn deserialize_http_response(data: &[u8]) -> anyhow::Result<actix_web::HttpRespo
     Ok(response)
 }
 
-async fn prepare_request(req: &actix_web::HttpRequest, body: &web::Bytes, config: &Data<Config>) -> MyResult<reqwest::Request> {
+async fn prepare_request(req: &actix_web::HttpRequest, body: &web::Bytes, config: &Data<Config>, state: &Data<State>) -> MyResult<reqwest::Request> {
     let url_prefix = if let Some(upstream_prefix) = &config.upstream_prefix {
         upstream_prefix.clone()
     } else {
@@ -128,7 +132,6 @@ async fn prepare_request(req: &actix_web::HttpRequest, body: &web::Bytes, config
     
     let method = reqwest::Method::from_bytes(req.method().as_str().as_bytes())?;
     // TODO: .timeout()
-    let client = Client::new(); // TODO: Cache. // TODO: No duplicate variable
     let headers = http::HeaderMap::from_iter(
         request_headers
             .map(|h| -> MyResult<_> {
@@ -140,12 +143,18 @@ async fn prepare_request(req: &actix_web::HttpRequest, body: &web::Bytes, config
             .into_iter()
             .collect::<MyResult<Vec<_>>>()?
     );
-    let builder = client.request(method, url).headers(headers).body(Vec::from(body.as_ref()));
+    let builder = state.client.request(method, url).headers(headers).body(Vec::from(body.as_ref()));
     Ok(builder.build()?)
 }
 
 // TODO: Use `&[u8]` instead of `BoxBody`.
-async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Config>, cache: Data<Arc<Mutex<&mut dyn Cache>>>)
+async fn serve(
+    req: actix_web::HttpRequest,
+    body: web::Bytes,
+    config: Data<Config>,
+    cache: Data<Arc<Mutex<&mut dyn Cache>>>,
+    state: Data<State>,
+)
     -> MyResult<actix_web::HttpResponse<BoxBody>>
 {
     let serialized_request = serialize_http_request(&req, &body)?;
@@ -163,9 +172,8 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
         }
         response
     } else {
-        let client = Client::new(); // TODO: Cache. // TODO: No duplicate variable
-        let reqwest = prepare_request(&req, &body, &config).await?;
-        let reqwest_response = client.execute(reqwest).await?;
+        let reqwest = prepare_request(&req, &body, &config, &state).await?;
+        let reqwest_response = state.client.execute(reqwest).await?;
 
         let mut actix_response = actix_web::HttpResponse::with_body(
             StatusCode::from_u16(reqwest_response.status().as_u16())?, Vec::from(body.as_ref()));
@@ -215,7 +223,13 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
         .body(Vec::from(body.as_ref())))
 }
 
-async fn proxy(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Config>, cache: Data<Arc<Mutex<&mut dyn Cache>>>)
+async fn proxy(
+    req: actix_web::HttpRequest,
+    body: web::Bytes,
+    config: Data<Config>,
+    cache: Data<Arc<Mutex<&mut dyn Cache>>>,
+    state: Data<State>, 
+)
     -> MyResult<actix_web::HttpResponse>
 {
     // TODO: Add more secure auth.
@@ -229,7 +243,7 @@ async fn proxy(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
         }
     }
 
-    serve(req, body, config, cache).await
+    serve(req, body, config, cache, state).await
 }
 
 #[actix_web::main]
@@ -243,10 +257,14 @@ async fn main() -> MyResult<()> {
     let server_url = "localhost:".to_string() + config.port.to_string().as_str();
     let cache = Arc::new(Mutex::new(MemCache::new(config.cache_timeout)));
     HttpServer::new(move || {
+        let state = State {
+            client: Client::new(),
+        };
         App::new().service(
             web::scope("")
-                .app_data(Data::new(config.clone()))
-                .app_data(Data::new(cache.clone()))
+            .app_data(Data::new(config.clone()))
+            .app_data(Data::new(state))
+            .app_data(Data::new(cache.clone()))
                 .route("/{_:.*}", web::route().to(proxy))
         )
     })
