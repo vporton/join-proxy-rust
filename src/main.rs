@@ -1,13 +1,17 @@
 mod errors;
+mod cache;
 
-use std::{collections::HashMap, fs::File, str::{from_utf8, FromStr}};
+use std::{collections::HashMap, fs::File, str::{from_utf8, FromStr}, sync::{Arc, Mutex}, time::Duration};
 
-use actix_web::{http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
+use actix_web::{body::BoxBody, http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
 use anyhow::anyhow;
+use cache::cache::{Cache, Key};
 use clap::Parser;
 use errors::MyResult;
 use reqwest::Client;
 use serde_derive::Deserialize;
+
+use crate::cache::mem_cache::MemCache;
 
 #[derive(clap::Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -23,6 +27,7 @@ struct Config {
     port: u16,
     our_secret: Option<String>, // simple Bearer authentication // TODO: Don't authenticate with bearer, if uses another auth.
     upstream_prefix: Option<String>,
+    cache_timeout: Duration,
     remove_request_headers: Vec<String>,
     add_request_headers: HashMap<String, String>,
     remove_response_headers: Vec<String>,
@@ -35,7 +40,7 @@ fn default_port() -> u16 {
 
 // Two similar functions with different data types follow:
 
-fn serialize_http_request(request: actix_web::HttpRequest, bytes: actix_web::web::Bytes) -> anyhow::Result<Vec<u8>> {
+fn serialize_http_request(request: actix_web::HttpRequest, bytes: &actix_web::web::Bytes) -> anyhow::Result<Vec<u8>> {
     let headers_list = request.headers().into_iter()
         .map(|(k, v)| -> anyhow::Result<String> {
             Ok(k.to_string() + "\t" + v.to_str()?)
@@ -61,7 +66,8 @@ fn serialize_http_response(response: reqwest::Response, bytes: bytes::Bytes) -> 
     Ok([header_part.as_bytes(), b"\n", &bytes].concat())
 }
 
-fn deserialize_http_response(data: &[u8]) -> anyhow::Result<actix_web::HttpResponse<&[u8]>> {
+// TODO: Use `&[u8]` instead of `Vec`.
+fn deserialize_http_response(data: &[u8]) -> anyhow::Result<actix_web::HttpResponse<Vec<u8>>> {
     let mut iter1 = data.splitn(3, |&c| c == b'\n');
     // TODO: Eliminate duplicate error messages.
     let status_code_bytes = iter1.next().ok_or_else(|| anyhow!("Wrong data in DB."))?;
@@ -70,7 +76,7 @@ fn deserialize_http_response(data: &[u8]) -> anyhow::Result<actix_web::HttpRespo
 
     let status_code: u16 = str::parse(from_utf8(status_code_bytes)?)?;
     let mut response = actix_web::HttpResponse::with_body(
-        StatusCode::from_u16(status_code)?, body);
+        StatusCode::from_u16(status_code)?, Vec::from(body));
 
     let headers = response.headers_mut();
     for header_str in headers_bytes.split(|&c| c == b'\r') {
@@ -83,7 +89,7 @@ fn deserialize_http_response(data: &[u8]) -> anyhow::Result<actix_web::HttpRespo
     Ok(response)
 }
 
-async fn prepare_request(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Config>) -> MyResult<reqwest::Request> {
+async fn prepare_request(req: actix_web::HttpRequest, body: &web::Bytes, config: Data<Config>) -> MyResult<reqwest::Request> {
     let url_prefix = if let Some(upstream_prefix) = &config.upstream_prefix {
         upstream_prefix.clone()
     } else {
@@ -127,15 +133,21 @@ async fn prepare_request(req: actix_web::HttpRequest, body: web::Bytes, config: 
             .into_iter()
             .collect::<MyResult<Vec<_>>>()?
     );
-    let builder = client.request(method, url).headers(headers).body(body);
+    let builder = client.request(method, url).headers(headers).body(Vec::from(body.as_ref())); // TODO: Avoid copying `Vec`.
     Ok(builder.build()?)
 }
 
-async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Config>) -> MyResult<actix_web::HttpResponse> {
-    let serialized_request = serialize_http_request(req, body)?;
+// TODO: Use `&[u8]` instead of `BoxBody`.
+async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Config>, cache: Data<Arc<Mutex<&mut dyn Cache>>>)
+    -> MyResult<actix_web::HttpResponse<BoxBody>>
+{
+    let serialized_request = serialize_http_request(req, &body)?;
 
-    let response = if let Some(serialize_response) = cache.get(serialized_request.as_slice()) {
-        let response = deserialize_http_response(serialize_response)?;
+    let mut cache = cache.lock().unwrap();
+    let response = &mut if let Some(serialize_response) =
+        cache.get(Key(serialized_request.as_slice()), config.cache_timeout)?
+    {
+        let mut response = deserialize_http_response(serialize_response)?; // FIXME: Retrieval of response second time.
         response.headers_mut().append(
             http_for_actix::HeaderName::from_str("X-JoinProxy-Response").unwrap(),
             http_for_actix::HeaderValue::from_str("Hit").unwrap(),
@@ -143,11 +155,11 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
         response
     } else {
         let client = Client::new(); // TODO: Cache. // TODO: No duplicate variable
-        let reqwest = prepare_request(req, body, config).await?;
+        let reqwest = prepare_request(req, &body, config).await?;
         let response = client.execute(reqwest).await?;
 
         let mut response = actix_web::HttpResponse::with_body(
-            StatusCode::from_u16(response.status().as_u16())?, body.as_ref());
+            StatusCode::from_u16(response.status().as_u16())?, Vec::from(body.as_ref())); // TODO: Don't copy `Vec`
 
         // cache.put() // TODO
 
@@ -155,7 +167,7 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
         for (k, v) in response.headers() {
             headers.append(
                 http_for_actix::HeaderName::from_str(k.as_str()).map_err(|_| anyhow!("Invalid header name."))?,
-                http_for_actix::HeaderValue::from_str(v.to_str()?).map_err(|_| anyhow!("Invalid header value."))?
+                http_for_actix::HeaderValue::from_str(v.to_str()?).map_err(|_| anyhow!("Invalid header value."))?,
             );
         }
         response.headers_mut().append(
@@ -188,7 +200,7 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
     };
 
     Ok(actix_web::HttpResponse::build(StatusCode::from_u16(response.status().as_u16())?)
-        .body(*response.body())) // TODO: streaming
+        .body(Vec::from(body.clone().as_ref()))) // TODO: streaming // TODO: Don't copy `Vec`
 }
 
 async fn proxy(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Config>) -> MyResult<actix_web::HttpResponse> {
@@ -215,11 +227,14 @@ async fn main() -> MyResult<()> {
         .map_err(|e| anyhow!("Cannot read config file {}: {}", args.config_file, e))?;
 
     let server_url = "localhost:".to_string() + config.port.to_string().as_str();
-    HttpServer::new(move || App::new().service(
-        web::scope("")
+    let cache = Arc::new(Mutex::new(&mut MemCache::new()));
+    HttpServer::new(move || {
+        App::new().service(
+            web::scope("")
             .app_data(Data::new(config.clone()))
+            .app_data(Data::new(cache.clone()))
             .route("/{_:.*}", web::route().to(proxy)))
-    )
+    })
         .bind(server_url)?
         .run()
         .await.map_err(|e| e.into())
