@@ -48,6 +48,7 @@ fn default_show_hit_miss() -> bool {
 
 struct State {
     client: reqwest::Client,
+    additional_response_headers: Arc<Vec<(http_for_actix::HeaderName, http_for_actix::HeaderValue)>>,
 }
 
 // Two similar functions with different data types follow:
@@ -111,23 +112,13 @@ async fn prepare_request(req: &actix_web::HttpRequest, body: &web::Bytes, config
     };
     let url = url_prefix + req.path();
 
-    // TODO: Calculate `additional_headers` only once.
-    let additional_headers = &config.add_request_headers;
-    let additional_headers = additional_headers.into_iter().map(
-        |v| -> MyResult<_> {
-            Ok((
-                http_for_actix::HeaderName::from_str(&v.0).map_err(|_| anyhow!("Invalid header name."))?,
-                http_for_actix::HeaderValue::from_str(&v.1).map_err(|_| anyhow!("Invalid header value."))?
-            ))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
     let request_headers = req.headers().into_iter()
         .map(|h| (h.0.clone(), h.1.clone()))
         .filter(|h|
             !config.remove_request_headers.contains(&h.0.to_string()) ||
                 h.0 == http_for_actix::HeaderName::from_static("host"))
         .chain(
-            additional_headers.into_iter().map(|h| (h.0, h.1))
+            state.as_ref().additional_response_headers.iter().map(|h| (h.0.clone(), h.1.clone()))
         );
     
     let method = reqwest::Method::from_bytes(req.method().as_str().as_bytes())?;
@@ -256,9 +247,20 @@ async fn main() -> MyResult<()> {
 
     let server_url = "localhost:".to_string() + config.port.to_string().as_str();
     let cache = Arc::new(Mutex::new(MemCache::new(config.cache_timeout)));
+    let additional_response_headers = &config.add_request_headers;
+    let additional_response_headers = additional_response_headers.into_iter().map(
+        |v| -> MyResult<_> {
+            Ok((
+                http_for_actix::HeaderName::from_str(&v.0).map_err(|_| anyhow!("Invalid header name."))?,
+                http_for_actix::HeaderValue::from_str(&v.1).map_err(|_| anyhow!("Invalid header value."))?
+            ))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let additional_response_headers: Arc<Vec<(http_for_actix::HeaderName, http_for_actix::HeaderValue)>> = Arc::new(additional_response_headers);
     HttpServer::new(move || {
         let state = State {
             client: Client::new(),
+            additional_response_headers: additional_response_headers.clone(),
         };
         App::new().service(
             web::scope("")
