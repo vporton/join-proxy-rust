@@ -42,7 +42,7 @@ fn default_port() -> u16 {
     8080
 }
 
-fn default_show_hit_miss() {
+fn default_show_hit_miss() -> bool {
     true
 }
 
