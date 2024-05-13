@@ -245,9 +245,10 @@ async fn main() -> MyResult<()> {
     HttpServer::new(move || {
         App::new().service(
             web::scope("")
-            .app_data(Data::new(config.clone()))
-            .app_data(Data::new(cache.clone()))
-            .route("/{_:.*}", web::route().to(proxy)))
+                .app_data(Data::new(config.clone()))
+                .app_data(Data::new(cache.clone()))
+                .route("/{_:.*}", web::route().to(proxy))
+        )
     })
         .bind(server_url)?
         .run()
