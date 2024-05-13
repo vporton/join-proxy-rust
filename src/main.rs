@@ -40,6 +40,8 @@ struct Config {
     upstream_connect_timeout: Duration,
     #[serde(default="default_upstream_read_timeout")]
     upstream_read_timeout: Duration,
+    #[serde(default="default_add_forwarded_from_header")]
+    add_forwarded_from_header: bool,
 }
 
 fn default_port() -> u16 {
@@ -56,6 +58,10 @@ fn default_upstream_connect_timeout() -> Duration {
 
 fn default_upstream_read_timeout() -> Duration {
     Duration::from_secs(60) // I set it big, for the use case of OpenAI API
+}
+
+fn default_add_forwarded_from_header() -> bool {
+    false // Isn't it useless?
 }
 
 struct State {
@@ -199,11 +205,13 @@ async fn serve(
             );
         }
         // "content-length", "content-encoding" // TODO
-        if let Some(addr) = req.head().peer_addr { // TODO
-            actix_response.headers_mut().append(
-                http_for_actix::HeaderName::from_str("X-Forwarded-For").unwrap(),
-                http_for_actix::HeaderValue::from_str(&addr.ip().to_string()).unwrap(),
-            );
+        if config.add_forwarded_from_header {
+            if let Some(addr) = req.head().peer_addr {
+                actix_response.headers_mut().append(
+                    http_for_actix::HeaderName::from_str("X-Forwarded-For").unwrap(),
+                    http_for_actix::HeaderValue::from_str(&addr.ip().to_string()).unwrap(),
+                );
+            }
         }
         for k in state.response_headers_to_remove.iter() {
             actix_response.headers_mut().remove(k);
