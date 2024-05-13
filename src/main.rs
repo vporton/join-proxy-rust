@@ -27,7 +27,7 @@ struct Args {
 struct Config {
     #[serde(default="default_port")]
     port: u16,
-    our_secret: Option<String>, // simple Bearer authentication // TODO: Don't authenticate with bearer, if uses another auth.
+    our_secret: Option<String>, // simple Bearer authentication
     upstream_prefix: Option<String>,
     cache_timeout: Duration,
     remove_request_headers: Vec<String>,
