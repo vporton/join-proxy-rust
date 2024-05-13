@@ -8,19 +8,24 @@ use super::cache::{Key, Value};
 pub struct MemCache {
     data: HashMap<Vec<u8>, Vec<u8>>,
     put_times: BTreeMap<SystemTime, Vec<Vec<u8>>>, // time -> keys
+    keep_duration: Duration,
 }
 
 impl MemCache {
-    pub fn new() -> Self {
+    pub fn new(keep_duration: Duration) -> Self {
         Self {
             data: HashMap::new(),
             put_times: BTreeMap::new(),
+            keep_duration,
         }
     }
 }
 
 impl Cache for MemCache {
-    fn put(&mut self, key: Key, value: Value, _save_for: Duration) -> MyResult<()> {
+    fn keep_duration(&self) -> Duration {
+        self.keep_duration
+    }
+    fn put(&mut self, key: Key, value: Value) -> MyResult<()> {
         self.data.insert(Vec::from(key.0), Vec::from(value.0));
         let time = SystemTime::now();
         self.put_times
@@ -31,11 +36,11 @@ impl Cache for MemCache {
         Ok(())
     }
 
-    fn get(&mut self, key: Key, save_for: Duration) -> MyResult<Option<&Vec<u8>>> {
+    fn get(&mut self, key: Key) -> MyResult<Option<&Vec<u8>>> {
         // Remove expired entries.
-        let time = SystemTime::now();
+        let time_threshold = SystemTime::now() - self.keep_duration;
         while let Some(kv) = self.put_times.first_key_value() {
-            if *kv.0 < time - save_for {
+            if *kv.0 < time_threshold {
                 for kv2 in kv.1 {
                     self.data.remove(kv2);
                 }

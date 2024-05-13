@@ -147,7 +147,7 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
 
     let mut cache = cache.lock().unwrap();
     let response = &mut if let Some(serialize_response) =
-        cache.get(Key(serialized_request.as_slice()), config.cache_timeout)?
+        cache.get(Key(serialized_request.as_slice()))?
     {
         let mut response = deserialize_http_response(serialize_response)?;
         response.headers_mut().append( // TODO: Hit/Miss marks are a disturbance for IC consensus (but a useful debugging aid).
@@ -174,7 +174,7 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
         // TODO: After which headers modifications to put this block?
         let hash = Sha256::digest(serialized_request.as_slice());
         // TODO: Eliminate `clone()`.
-        cache.put(Key(&hash), Value(serialize_http_response(reqwest_response, body.clone())?.as_slice()), config.cache_timeout)?;
+        cache.put(Key(&hash), Value(serialize_http_response(reqwest_response, body.clone())?.as_slice()))?;
 
 
         actix_response.headers_mut().append(
@@ -235,7 +235,7 @@ async fn main() -> MyResult<()> {
         .map_err(|e| anyhow!("Cannot read config file {}: {}", args.config_file, e))?;
 
     let server_url = "localhost:".to_string() + config.port.to_string().as_str();
-    let cache = Arc::new(Mutex::new(MemCache::new()));
+    let cache = Arc::new(Mutex::new(MemCache::new(config.cache_timeout)));
     HttpServer::new(move || {
         App::new().service(
             web::scope("")
