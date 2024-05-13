@@ -7,14 +7,14 @@ use super::cache::{Key, Value};
 
 pub struct MemCache {
     data: HashMap<Vec<u8>, Vec<u8>>,
-    put_times: BTreeMap<SystemTime, Vec<u8>>, // time -> key
+    put_times: BTreeMap<SystemTime, Vec<Vec<u8>>>, // time -> keys
 }
 
 impl MemCache {
     pub fn new() -> Self {
         Self {
             data: HashMap::new(),
-            put_times: BTreeMap::new(), // FIXME: In theory, multiple items may have the same time.
+            put_times: BTreeMap::new(),
         }
     }
 }
@@ -22,7 +22,11 @@ impl MemCache {
 impl Cache for MemCache {
     fn put(&mut self, key: Key, value: Value, _save_for: Duration) -> MyResult<()> {
         self.data.insert(Vec::from(key.0), Vec::from(value.0));
-        self.put_times.insert(SystemTime::now(), Vec::from(key.0));
+        let time = SystemTime::now();
+        self.put_times
+            .entry(time)
+            .and_modify(|v| v.push(Vec::from(value.0)))
+            .or_insert_with(|| vec![Vec::from(value.0)]);
 
         Ok(())
     }
@@ -32,7 +36,9 @@ impl Cache for MemCache {
         let time = SystemTime::now();
         while let Some(kv) = self.put_times.first_key_value() {
             if *kv.0 < time - save_for {
-                self.data.remove(kv.1);
+                for kv2 in kv.1 {
+                    self.data.remove(kv2);
+                }
                 self.put_times.pop_first();
             }
         }
