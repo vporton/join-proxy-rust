@@ -34,6 +34,7 @@ struct Config {
     add_request_headers: Vec<(String, String)>,
     remove_response_headers: Vec<String>,
     add_response_headers: Vec<(String, String)>,
+    show_hit_miss: bool,
 }
 
 fn default_port() -> u16 {
@@ -68,7 +69,6 @@ fn serialize_http_response(response: reqwest::Response, bytes: bytes::Bytes) -> 
     Ok([header_part.as_bytes(), b"\n", &bytes].concat())
 }
 
-// TODO: Use `&[u8]` instead of `Vec`.
 fn deserialize_http_response(data: &[u8]) -> anyhow::Result<actix_web::HttpResponse<Vec<u8>>> {
     let mut iter1 = data.splitn(3, |&c| c == b'\n');
     // TODO: Eliminate duplicate error messages.
@@ -135,7 +135,7 @@ async fn prepare_request(req: &actix_web::HttpRequest, body: &web::Bytes, config
             .into_iter()
             .collect::<MyResult<Vec<_>>>()?
     );
-    let builder = client.request(method, url).headers(headers).body(Vec::from(body.as_ref())); // TODO: Avoid copying `Vec`.
+    let builder = client.request(method, url).headers(headers).body(Vec::from(body.as_ref()));
     Ok(builder.build()?)
 }
 
@@ -150,10 +150,12 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
         cache.get(Key(serialized_request.as_slice()))?
     {
         let mut response = deserialize_http_response(serialize_response)?;
-        response.headers_mut().append( // TODO: Hit/Miss marks are a disturbance for IC consensus (but a useful debugging aid).
-            http_for_actix::HeaderName::from_str("X-JoinProxy-Response").unwrap(),
-            http_for_actix::HeaderValue::from_str("Hit").unwrap(),
-        );
+        if config.show_hit_miss {
+            response.headers_mut().append( // TODO: Hit/Miss marks are a disturbance for IC consensus (but a useful debugging aid).
+                http_for_actix::HeaderName::from_str("X-JoinProxy-Response").unwrap(),
+                http_for_actix::HeaderValue::from_str("Hit").unwrap(),
+            );
+        }
         response
     } else {
         let client = Client::new(); // TODO: Cache. // TODO: No duplicate variable
@@ -161,7 +163,7 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
         let reqwest_response = client.execute(reqwest).await?;
 
         let mut actix_response = actix_web::HttpResponse::with_body(
-            StatusCode::from_u16(reqwest_response.status().as_u16())?, Vec::from(body.as_ref())); // TODO: Don't copy `Vec`
+            StatusCode::from_u16(reqwest_response.status().as_u16())?, Vec::from(body.as_ref()));
 
         let headers = actix_response.headers_mut();
         for (k, v) in reqwest_response.headers() {
@@ -173,7 +175,6 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
 
         // TODO: After which headers modifications to put this block?
         let hash = Sha256::digest(serialized_request.as_slice());
-        // TODO: Eliminate `clone()`.
         cache.put(Key(&hash), Value(serialize_http_response(reqwest_response, body.clone())?.as_slice()))?;
 
 
@@ -206,7 +207,7 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
     };
 
     Ok(actix_web::HttpResponse::build(StatusCode::from_u16(response.status().as_u16())?)
-        .body(Vec::from(body.as_ref()))) // TODO: streaming // TODO: Don't copy `Vec`
+        .body(Vec::from(body.as_ref())))
 }
 
 async fn proxy(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Config>, cache: Data<Arc<Mutex<&mut dyn Cache>>>)

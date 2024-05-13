@@ -49,6 +49,6 @@ impl Cache for MemCache {
             }
         }
 
-        Ok(self.data.get(&Vec::from(key.0))) // TODO: inefficient?
+        Ok(self.data.get(&Vec::from(key.0)))
     }
 }
