@@ -49,6 +49,7 @@ fn default_show_hit_miss() -> bool {
 struct State {
     client: reqwest::Client,
     additional_response_headers: Arc<Vec<(http_for_actix::HeaderName, http_for_actix::HeaderValue)>>,
+    response_headers_to_remove: Arc<Vec<http_for_actix::HeaderName>>,
 }
 
 // Two similar functions with different data types follow:
@@ -186,10 +187,6 @@ async fn serve(
             http_for_actix::HeaderName::from_str("X-JoinProxy-Response").unwrap(),
             http_for_actix::HeaderValue::from_str("Miss").unwrap(),
         );
-        //  http://tools.ietf.org/html/rfc2616#section-13.5.1
-        let hop_by_hop = ["connection", "keep-alive", "te", "trailers", "transfer-encoding", "upgrade"];
-        let headers_to_remove = // TODO: Calculate once.
-            hop_by_hop.into_iter().chain(config.remove_response_headers.iter().map(|s| s.as_str()));
         // "content-length", "content-encoding" // TODO
         if let Some(addr) = req.head().peer_addr { // TODO
             actix_response.headers_mut().append(
@@ -197,7 +194,7 @@ async fn serve(
                 http_for_actix::HeaderValue::from_str(&addr.ip().to_string()).unwrap(),
             );
         }
-        for k in headers_to_remove {
+        for k in state.response_headers_to_remove.iter() {
             actix_response.headers_mut().remove(k);
         }
         for (k, v) in config.add_response_headers.iter() {
@@ -246,7 +243,9 @@ async fn main() -> MyResult<()> {
         .map_err(|e| anyhow!("Cannot read config file {}: {}", args.config_file, e))?;
 
     let server_url = "localhost:".to_string() + config.port.to_string().as_str();
+
     let cache = Arc::new(Mutex::new(MemCache::new(config.cache_timeout)));
+
     let additional_response_headers = &config.add_request_headers;
     let additional_response_headers = additional_response_headers.into_iter().map(
         |v| -> MyResult<_> {
@@ -256,11 +255,22 @@ async fn main() -> MyResult<()> {
             ))
         })
         .collect::<Result<Vec<_>, _>>()?;
-    let additional_response_headers: Arc<Vec<(http_for_actix::HeaderName, http_for_actix::HeaderValue)>> = Arc::new(additional_response_headers);
+    let additional_response_headers = Arc::new(additional_response_headers);
+
+    //  http://tools.ietf.org/html/rfc2616#section-13.5.1
+    let hop_by_hop = ["connection", "keep-alive", "te", "trailers", "transfer-encoding", "upgrade"];
+    let response_headers_to_remove =
+        hop_by_hop.into_iter()
+            .chain(config.remove_response_headers.iter().map(|s| s.as_str()))
+            .map(|h| http_for_actix::HeaderName::from_str(h).map_err(|_| anyhow!("Invalid header name.").into()));
+    let response_headers_to_remove = response_headers_to_remove.collect::<MyResult<Vec<_>>>()?;
+    let response_headers_to_remove = Arc::new(response_headers_to_remove);
+
     HttpServer::new(move || {
         let state = State {
             client: Client::new(),
             additional_response_headers: additional_response_headers.clone(),
+            response_headers_to_remove: response_headers_to_remove.clone(),
         };
         App::new().service(
             web::scope("")
