@@ -1,5 +1,5 @@
 [package]
-name = "passthrough-proxy-rust"
+name = "joining-proxy-rust"
 version = "0.0.1"
 edition = "2021"
 

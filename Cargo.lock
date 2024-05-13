@@ -939,6 +939,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "joining-proxy-rust"
+version = "0.0.1"
+dependencies = [
+ "actix",
+ "actix-web",
+ "anyhow",
+ "bytes",
+ "clap",
+ "derive_more",
+ "http 0.2.12",
+ "http 1.1.0",
+ "reqwest",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "sha2",
+ "thiserror",
+]
+
+[[package]]
 name = "js-sys"
 version = "0.3.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1141,26 +1161,6 @@ dependencies = [
  "redox_syscall",
  "smallvec",
  "windows-targets 0.52.5",
-]
-
-[[package]]
-name = "passthrough-proxy-rust"
-version = "0.0.1"
-dependencies = [
- "actix",
- "actix-web",
- "anyhow",
- "bytes",
- "clap",
- "derive_more",
- "http 0.2.12",
- "http 1.1.0",
- "reqwest",
- "serde",
- "serde_derive",
- "serde_json",
- "sha2",
- "thiserror",
 ]
 
 [[package]]
