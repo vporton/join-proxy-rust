@@ -11,7 +11,6 @@ pub struct MemCache {
     keep_duration: Duration,
 }
 
-// TODO: Implement file-persistency.
 impl MemCache {
     pub fn new(keep_duration: Duration) -> Self {
         Self {
