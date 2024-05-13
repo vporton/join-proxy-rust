@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 actix = "0.13.3"
-actix-web = "4.5.1" # TODO: features
+actix-web = { version = "4.5.1", features = ["macros", "http2"] }
 anyhow = "1.0.83"
 bytes = "1.6.0"
 clap = { version = "4.5.4", features = ["derive"] }
