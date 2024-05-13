@@ -192,6 +192,7 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
 }
 
 async fn proxy(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Config>) -> MyResult<actix_web::HttpResponse> {
+    // TODO: Add more secure auth.
     if let Some(our_secret) = &config.our_secret {
         let passed_key = req.headers()
             .get("x-joinproxy-key")
