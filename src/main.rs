@@ -34,11 +34,16 @@ struct Config {
     add_request_headers: Vec<(String, String)>,
     remove_response_headers: Vec<String>,
     add_response_headers: Vec<(String, String)>,
+    #[serde(default="default_show_hit_miss")]
     show_hit_miss: bool,
 }
 
 fn default_port() -> u16 {
     8080
+}
+
+fn default_show_hit_miss() {
+    true
 }
 
 // Two similar functions with different data types follow:
@@ -151,7 +156,7 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
     {
         let mut response = deserialize_http_response(serialize_response)?;
         if config.show_hit_miss {
-            response.headers_mut().append( // TODO: Hit/Miss marks are a disturbance for IC consensus (but a useful debugging aid).
+            response.headers_mut().append(
                 http_for_actix::HeaderName::from_str("X-JoinProxy-Response").unwrap(),
                 http_for_actix::HeaderValue::from_str("Hit").unwrap(),
             );
