@@ -9,7 +9,7 @@ use anyhow::anyhow;
 use cache::cache::{Cache, Key, Value};
 use clap::Parser;
 use errors::MyResult;
-use reqwest::Client;
+use reqwest::ClientBuilder;
 use serde_derive::Deserialize;
 use sha2::Sha256;
 
@@ -36,6 +36,10 @@ struct Config {
     add_response_headers: Vec<(String, String)>,
     #[serde(default="default_show_hit_miss")]
     show_hit_miss: bool,
+    #[serde(default="default_upstream_connect_timeout")]
+    upstream_connect_timeout: Duration,
+    #[serde(default="default_upstream_read_timeout")]
+    upstream_read_timeout: Duration,
 }
 
 fn default_port() -> u16 {
@@ -44,6 +48,14 @@ fn default_port() -> u16 {
 
 fn default_show_hit_miss() -> bool {
     true
+}
+
+fn default_upstream_connect_timeout() -> Duration {
+    Duration::from_secs(10)
+}
+
+fn default_upstream_read_timeout() -> Duration {
+    Duration::from_secs(60) // I set it big, for the use case of OpenAI API
 }
 
 struct State {
@@ -123,7 +135,6 @@ async fn prepare_request(req: &actix_web::HttpRequest, body: &web::Bytes, config
         );
     
     let method = reqwest::Method::from_bytes(req.method().as_str().as_bytes())?;
-    // TODO: .timeout()
     let headers = http::HeaderMap::from_iter(
         request_headers
             .map(|h| -> MyResult<_> {
@@ -268,7 +279,10 @@ async fn main() -> MyResult<()> {
 
     HttpServer::new(move || {
         let state = State {
-            client: Client::new(),
+            client: ClientBuilder::new()
+                .connect_timeout(config.upstream_connect_timeout)
+                .read_timeout(config.upstream_read_timeout)
+                .build().unwrap(),
             additional_response_headers: additional_response_headers.clone(),
             response_headers_to_remove: response_headers_to_remove.clone(),
         };
