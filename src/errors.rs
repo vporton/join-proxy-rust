@@ -1,4 +1,5 @@
 use actix_web::{http::{header::ContentType, StatusCode}, HttpResponse, ResponseError};
+use http_for_actix::status::InvalidStatusCode;
 use thiserror::Error;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -6,6 +7,10 @@ use std::fmt::{Debug, Display, Formatter};
 pub enum MyError {
     Anyhow(Box<anyhow::Error>),
     Io(std::io::Error),
+    InvalidMethod(http::method::InvalidMethod),
+    HttpResponse(reqwest::Response),
+    ReqwestError(reqwest::Error),
+    InvalidStatus(InvalidStatusCode),
 }
 
 impl Display for MyError {
@@ -13,6 +18,10 @@ impl Display for MyError {
         match self {
             Self::Anyhow(e) => Debug::fmt(&*e, f),
             Self::Io(e) => Debug::fmt(&*e, f),
+            Self::InvalidMethod(e) => Debug::fmt(&*e, f),
+            Self::HttpResponse(e) => Debug::fmt(&*e, f),
+            Self::ReqwestError(e) => Debug::fmt(&*e, f),
+            Self::InvalidStatus(e) => Debug::fmt(&*e, f),
         }
     }
 }
@@ -26,6 +35,30 @@ impl From<anyhow::Error> for MyError {
 impl From<std::io::Error> for MyError {
     fn from(err: std::io::Error) -> Self {
         Self::Io(err)
+    }
+}
+
+impl From<http::method::InvalidMethod> for MyError {
+    fn from(err: http::method::InvalidMethod) -> Self {
+        Self::InvalidMethod(err)
+    }
+}
+
+impl From<reqwest::Response> for MyError {
+    fn from(err: reqwest::Response) -> Self {
+        Self::HttpResponse(err)
+    }
+}
+
+impl From<reqwest::Error> for MyError {
+    fn from(err: reqwest::Error) -> Self {
+        Self::ReqwestError(err)
+    }
+}
+
+impl From<InvalidStatusCode> for MyError {
+    fn from(err: InvalidStatusCode) -> Self {
+        Self::InvalidStatus(err)
     }
 }
 

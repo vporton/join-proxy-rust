@@ -6,6 +6,7 @@ use actix_web::{http::{header::{HeaderName, HeaderValue}, StatusCode}, web::{sel
 use anyhow::anyhow;
 use clap::Parser;
 use errors::MyResult;
+use reqwest::Client;
 use serde_derive::Deserialize;
 
 #[derive(clap::Parser, Debug)]
@@ -85,6 +86,11 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes) -> MyResult<actix_
     // let mut builder = client
     //     .request_from(req.path(), req.head())
     //     .no_decompress();
+    let method = reqwest::Method::from_bytes(req.method().as_str().as_bytes())?;
+    // TODO: .timeout()
+    let client = Client::new(); // TODO: Cache.
+    let reqwest = client.request(method, target_url)/*.headers(headers)*/.body(body).build()?;
+    let response = client.execute(reqwest).await?;
 
     if let Some(addr) = req.head().peer_addr {
         // builder = builder.header("X-Forwarded-For", addr.ip().to_string());
@@ -92,9 +98,9 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes) -> MyResult<actix_
 
     // let res = builder.send_body(body.into()).await?;
 
-    Ok(actix_web::HttpResponse::build(res.status())
+    Ok(actix_web::HttpResponse::build(StatusCode::from_u16(response.status().as_u16())?)
         .append_header(("X-Proxied", "true"))
-        .streaming(res))
+        .body(response.bytes().await?)) // TODO: streaming
 }
 
 async fn proxy(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Config>) -> MyResult<actix_web::HttpResponse> {

@@ -10,6 +10,8 @@ anyhow = "1.0.83"
 bytes = "1.6.0"
 clap = { version = "4.5.4", features = ["derive"] }
 derive_more = "0.99.17"
+http = "1.1.0"
+http_for_actix = { version = "0.2.11", package = "http" }
 reqwest = { version = "0.12.4", features = ["default-tls", "http2", "macos-system-configuration"] }
 serde = "1.0.201"
 serde_derive = "1.0.201"
