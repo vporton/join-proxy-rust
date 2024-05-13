@@ -193,11 +193,12 @@ async fn serve(
         let hash = Sha256::digest(serialized_request.as_slice());
         cache.put(Key(&hash), Value(serialize_http_response(reqwest_response, body.clone())?.as_slice()))?;
 
-
-        actix_response.headers_mut().append(
-            http_for_actix::HeaderName::from_str("X-JoinProxy-Response").unwrap(),
-            http_for_actix::HeaderValue::from_str("Miss").unwrap(),
-        );
+        if config.show_hit_miss {
+            actix_response.headers_mut().append(
+                http_for_actix::HeaderName::from_str("X-JoinProxy-Response").unwrap(),
+                http_for_actix::HeaderValue::from_str("Miss").unwrap(),
+            );
+        }
         // "content-length", "content-encoding" // TODO
         if let Some(addr) = req.head().peer_addr { // TODO
             actix_response.headers_mut().append(
