@@ -40,7 +40,7 @@ fn default_port() -> u16 {
 
 // Two similar functions with different data types follow:
 
-fn serialize_http_request(request: actix_web::HttpRequest, bytes: &actix_web::web::Bytes) -> anyhow::Result<Vec<u8>> {
+fn serialize_http_request(request: &actix_web::HttpRequest, bytes: &actix_web::web::Bytes) -> anyhow::Result<Vec<u8>> {
     let headers_list = request.headers().into_iter()
         .map(|(k, v)| -> anyhow::Result<String> {
             Ok(k.to_string() + "\t" + v.to_str()?)
@@ -89,7 +89,7 @@ fn deserialize_http_response(data: &[u8]) -> anyhow::Result<actix_web::HttpRespo
     Ok(response)
 }
 
-async fn prepare_request(req: actix_web::HttpRequest, body: &web::Bytes, config: Data<Config>) -> MyResult<reqwest::Request> {
+async fn prepare_request(req: &actix_web::HttpRequest, body: &web::Bytes, config: &Data<Config>) -> MyResult<reqwest::Request> {
     let url_prefix = if let Some(upstream_prefix) = &config.upstream_prefix {
         upstream_prefix.clone()
     } else {
@@ -141,13 +141,13 @@ async fn prepare_request(req: actix_web::HttpRequest, body: &web::Bytes, config:
 async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Config>, cache: Data<Arc<Mutex<&mut dyn Cache>>>)
     -> MyResult<actix_web::HttpResponse<BoxBody>>
 {
-    let serialized_request = serialize_http_request(req, &body)?;
+    let serialized_request = serialize_http_request(&req, &body)?;
 
     let mut cache = cache.lock().unwrap();
     let response = &mut if let Some(serialize_response) =
         cache.get(Key(serialized_request.as_slice()), config.cache_timeout)?
     {
-        let mut response = deserialize_http_response(serialize_response)?; // FIXME: Retrieval of response second time.
+        let mut response = deserialize_http_response(serialize_response)?;
         response.headers_mut().append(
             http_for_actix::HeaderName::from_str("X-JoinProxy-Response").unwrap(),
             http_for_actix::HeaderValue::from_str("Hit").unwrap(),
@@ -155,22 +155,22 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
         response
     } else {
         let client = Client::new(); // TODO: Cache. // TODO: No duplicate variable
-        let reqwest = prepare_request(req, &body, config).await?;
+        let reqwest = prepare_request(&req, &body, &config).await?;
         let response = client.execute(reqwest).await?;
 
-        let mut response = actix_web::HttpResponse::with_body(
+        let mut actix_response = actix_web::HttpResponse::with_body(
             StatusCode::from_u16(response.status().as_u16())?, Vec::from(body.as_ref())); // TODO: Don't copy `Vec`
 
         // cache.put() // TODO
 
-        let headers = response.headers_mut();
+        let headers = actix_response.headers_mut();
         for (k, v) in response.headers() {
             headers.append(
                 http_for_actix::HeaderName::from_str(k.as_str()).map_err(|_| anyhow!("Invalid header name."))?,
                 http_for_actix::HeaderValue::from_str(v.to_str()?).map_err(|_| anyhow!("Invalid header value."))?,
             );
         }
-        response.headers_mut().append(
+        actix_response.headers_mut().append(
             http_for_actix::HeaderName::from_str("X-JoinProxy-Response").unwrap(),
             http_for_actix::HeaderValue::from_str("Miss").unwrap(),
         );
@@ -178,32 +178,34 @@ async fn serve(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
         //  http://tools.ietf.org/html/rfc2616#section-13.5.1
         let hop_by_hop = ["connection", "keep-alive", "te", "trailers", "transfer-encoding", "upgrade"];
         let headers_to_remove = // TODO: Calculate once.
-            hop_by_hop.into_iter().chain(config.remove_response_headers.into_iter().map(|s| s.as_str()));
+            hop_by_hop.into_iter().chain(config.remove_response_headers.iter().map(|s| s.as_str()));
         // "content-length", "content-encoding" // TODO
         if let Some(addr) = req.head().peer_addr { // TODO
-            response.headers_mut().append(
+            actix_response.headers_mut().append(
                 http_for_actix::HeaderName::from_str("X-Forwarded-For").unwrap(),
                 http_for_actix::HeaderValue::from_str(&addr.ip().to_string()).unwrap(),
             );
         }
         for k in headers_to_remove {
-            response.headers_mut().remove(k);
+            actix_response.headers_mut().remove(k);
         }
         for (k, v) in config.add_response_headers.iter() {
-            response.headers_mut().append(
+            actix_response.headers_mut().append(
                 http_for_actix::HeaderName::from_str(k).map_err(|_| anyhow!("Invalid header name."))?,
                 http_for_actix::HeaderValue::from_str(&v).map_err(|_| anyhow!("Invalid header value."))?
             );
         }
 
-        response
+        actix_response
     };
 
     Ok(actix_web::HttpResponse::build(StatusCode::from_u16(response.status().as_u16())?)
         .body(Vec::from(body.clone().as_ref()))) // TODO: streaming // TODO: Don't copy `Vec`
 }
 
-async fn proxy(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Config>) -> MyResult<actix_web::HttpResponse> {
+async fn proxy(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Config>, cache: Data<Arc<Mutex<&mut dyn Cache>>>)
+    -> MyResult<actix_web::HttpResponse>
+{
     // TODO: Add more secure auth.
     if let Some(our_secret) = &config.our_secret {
         let passed_key = req.headers()
@@ -215,7 +217,7 @@ async fn proxy(req: actix_web::HttpRequest, body: web::Bytes, config: Data<Confi
         }
     }
 
-    serve(req, body, config).await
+    serve(req, body, config, cache).await
 }
 
 #[actix_web::main]
@@ -227,7 +229,7 @@ async fn main() -> MyResult<()> {
         .map_err(|e| anyhow!("Cannot read config file {}: {}", args.config_file, e))?;
 
     let server_url = "localhost:".to_string() + config.port.to_string().as_str();
-    let cache = Arc::new(Mutex::new(&mut MemCache::new()));
+    let cache = Arc::new(Mutex::new(MemCache::new()));
     HttpServer::new(move || {
         App::new().service(
             web::scope("")

@@ -12,6 +12,7 @@ pub enum MyError {
     ReqwestError(reqwest::Error),
     InvalidStatus(InvalidStatusCode),
     HeaderToStr(http_for_actix::header::ToStrError),
+    HeaderToStr2(http::header::ToStrError), // TODO: Rename.
     // InvalidHeaderName(Box<http_for_actix::header::IntoHeaderName>),
 }
 
@@ -25,6 +26,7 @@ impl Display for MyError {
             Self::ReqwestError(e) => Debug::fmt(&*e, f),
             Self::InvalidStatus(e) => Debug::fmt(&*e, f),
             Self::HeaderToStr(e) => Debug::fmt(&*e, f),
+            Self::HeaderToStr2(e) => Debug::fmt(&*e, f),
             // Self::InvalidHeaderName(e) => Debug::fmt(&*e, f),
         }
     }
@@ -69,6 +71,12 @@ impl From<InvalidStatusCode> for MyError {
 impl From<http_for_actix::header::ToStrError> for MyError {
     fn from(err: http_for_actix::header::ToStrError) -> Self {
         Self::HeaderToStr(err)
+    }
+}
+
+impl From<http::header::ToStrError> for MyError {
+    fn from(err: http::header::ToStrError) -> Self {
+        Self::HeaderToStr2(err)
     }
 }
 
