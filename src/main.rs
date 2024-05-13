@@ -1,7 +1,7 @@
 mod errors;
 mod cache;
 
-use std::{collections::HashMap, fs::File, str::{from_utf8, FromStr}, sync::{Arc, Mutex}, time::Duration};
+use std::{fs::File, str::{from_utf8, FromStr}, sync::{Arc, Mutex}, time::Duration};
 
 use sha2::Digest;
 use actix_web::{body::BoxBody, http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
@@ -31,9 +31,9 @@ struct Config {
     upstream_prefix: Option<String>,
     cache_timeout: Duration,
     remove_request_headers: Vec<String>,
-    add_request_headers: HashMap<String, String>,
+    add_request_headers: Vec<(String, String)>,
     remove_response_headers: Vec<String>,
-    add_response_headers: HashMap<String, String>,
+    add_response_headers: Vec<(String, String)>,
 }
 
 fn default_port() -> u16 {
@@ -95,7 +95,7 @@ async fn prepare_request(req: &actix_web::HttpRequest, body: &web::Bytes, config
     let url_prefix = if let Some(upstream_prefix) = &config.upstream_prefix {
         upstream_prefix.clone()
     } else {
-        let host = req.headers().get("host")
+        let host = req.headers().get("x-host") // TODO: Document X-Host.
             .ok_or_else(|| anyhow!("Missing both upstream_prefix in config and Host: header"))?
             .to_str()?;
         "https://".to_string() + host
