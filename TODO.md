@@ -7,3 +7,5 @@ TODO:
 - Implement file-persistency for in-memory DB. Also, save on `SIG{INT,TERM}`.
 
 - Redis support.
+
+- Incrementing nonce to avoid upstream request replay attack.
