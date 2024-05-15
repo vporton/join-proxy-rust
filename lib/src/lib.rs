@@ -43,7 +43,7 @@ pub fn get_canister_pubkey<'a>(agent: &'a Agent, canister_id: Principal) -> Resu
         derivation_path: get_canister_sign_key(),
         key_id: EcdsaKeyId {
             curve: EcdsaCurve::Secp256k1,
-            name: "canister_verifier".to_string(),
+            name: "allowed_canister".to_string(),
         },
     };
     Ok(CanisterPublicKeyStatus(agent.update(&Principal::management_canister(), "sign_with_ecdsa")
