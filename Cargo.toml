@@ -1,20 +1,5 @@
-[package]
-name = "joining-proxy-rust"
-version = "0.0.1"
-edition = "2021"
+[workspace]
 
-[dependencies]
-actix = "0.13.3"
-actix-web = { version = "4.5.1", features = ["macros", "http2"] }
-anyhow = "1.0.83"
-bytes = "1.6.0"
-clap = { version = "4.5.4", features = ["derive"] }
-derive_more = "0.99.17"
-http = "1.1.0"
-http_for_actix = { version = "0.2.11", package = "http" }
-reqwest = { version = "0.12.4", features = ["default-tls", "http2", "macos-system-configuration"] }
-serde = "1.0.201"
-serde_derive = "1.0.201"
-serde_json = "1.0.117"
-sha2 = "0.10.8"
-thiserror = "1.0.60"
+members = [
+    "proxy",
+]
