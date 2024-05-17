@@ -22,7 +22,6 @@ struct Args {
     config_file: String,
 }
 
-
 #[derive(Clone, Deserialize, Debug)]
 struct Config {
     #[serde(default="default_port")]
