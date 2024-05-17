@@ -1573,6 +1573,7 @@ dependencies = [
  "candid",
  "ic-agent",
  "ic-cdk-macros",
+ "k256",
  "serde",
  "serde_derive",
 ]

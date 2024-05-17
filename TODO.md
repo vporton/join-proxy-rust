@@ -9,3 +9,5 @@ TODO:
 - Redis support.
 
 - Incrementing nonce to avoid upstream request replay attack.
+
+- No need to MD5 the entire request, just the nonce.

@@ -1,6 +1,8 @@
-use serde_derive::Serialize;
+use k256::ecdsa::{Signature, VerifyingKey};
+use serde_derive::{Deserialize, Serialize};
 use candid::{Encode, Decode, CandidType, Nat};
-use ic_agent::{agent::UpdateCall, export::Principal, Agent, AgentError};
+use ic_agent::{agent::{PollResult, UpdateCall}, export::Principal, Agent, AgentError, RequestId};
+use k256::ecdsa::signature::hazmat::PrehashVerifier;
 use ic_cdk_macros::*;
 
 pub static canister_sign_key: &[&[u8; 4]; 4] = &[
@@ -35,9 +37,39 @@ pub struct EcdsaPublicKeyArgs {
     key_id : EcdsaKeyId,
 }
 
-pub struct CanisterPublicKeyStatus<'a>(UpdateCall<'a>);
+#[derive(CandidType, Deserialize)]
+pub struct ECDSAPublicKeyReply {
+    pub public_key: Vec<u8>,
+    pub chain_code: Vec<u8>,
+}
 
-pub fn get_canister_pubkey<'a>(agent: &'a Agent, canister_id: Principal) -> Result<CanisterPublicKeyStatus<'a>, AgentError> {
+pub struct CanisterPublicKeyStatus {
+    request_id: RequestId,
+    // effective_canister_id: Principal,
+}
+
+pub enum CanisterPublicKeyPollResult {
+    Submitted,
+    Accepted,
+    Completed(ECDSAPublicKeyReply),
+}
+
+impl CanisterPublicKeyStatus {
+    pub async fn poll(
+        agent: &Agent,
+        request_id: &RequestId,
+    ) -> Result<CanisterPublicKeyPollResult, AgentError> {
+        let base = agent.poll(request_id, Principal::management_canister()).await?;
+        Ok(match base {
+            PollResult::Submitted => CanisterPublicKeyPollResult::Submitted,
+            PollResult::Accepted => CanisterPublicKeyPollResult::Accepted,
+            PollResult::Completed(v) =>
+                CanisterPublicKeyPollResult::Completed(Decode!(v.as_slice(), ECDSAPublicKeyReply)?),
+        })
+    }
+}
+
+pub async fn get_canister_pubkey(agent: &Agent, canister_id: Principal) -> Result<CanisterPublicKeyStatus, AgentError> {
     let arg = EcdsaPublicKeyArgs {
         canister_id: Some(canister_id),
         derivation_path: get_canister_sign_key(),
@@ -46,6 +78,12 @@ pub fn get_canister_pubkey<'a>(agent: &'a Agent, canister_id: Principal) -> Resu
             name: "allowed_canister".to_string(),
         },
     };
-    Ok(CanisterPublicKeyStatus(agent.update(&Principal::management_canister(), "sign_with_ecdsa")
-        .with_arg(Encode!(&arg)?).with_effective_canister_id(canister_id).call()))
+    Ok(CanisterPublicKeyStatus {
+        request_id: agent.update(&Principal::management_canister(), "sign_with_ecdsa")
+            .with_arg(Encode!(&arg)?).with_effective_canister_id(canister_id).call().await?,
+    })
+}
+
+pub fn verify_signature(signature: Signature, hash: &[u8; 32], pubkey: VerifyingKey) -> Result<(), k256::ecdsa::Error> {
+    pubkey.verify_prehash(hash, &signature)
 }
