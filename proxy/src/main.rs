@@ -270,7 +270,7 @@ async fn proxy(
     cache: Data<Arc<Mutex<&mut dyn Cache>>>,
     state: Data<State>, 
 )
-    -> anyhow::Result<actix_web::HttpResponse>
+    -> MyResult<actix_web::HttpResponse>
 {
     if let Some(our_secret) = &config.our_secret {
         let passed_key = req.headers()
@@ -282,20 +282,23 @@ async fn proxy(
         }
     }
     if let Some(verifying_key) = &state.verifying_key {
-        if let (Some(nonce), Some(signature)) =
+        if let (Some(nonce_header), Some(signature_as_base64)) =
             (req.headers().get("nonce"), req.headers().get("signature"))
         {
-            let nonce_iter = nonce.as_bytes().split(|&c| c == b':');
-            let long_time_nonce_as_base64 = nonce_iter.next().ok_or_else(|| Err("Wrong nonce."))?;
-            let short_time_nonce_as_base64 = nonce_iter.next().ok_or_else(|| Err("Wrong nonce."))?;
+            let mut nonce_iter = nonce_header.as_bytes().split(|&c| c == b':');
+            let long_time_nonce_as_base64 = nonce_iter.next().ok_or_else(|| anyhow!("Wrong nonce."))?;
+            let short_time_nonce_as_base64 = nonce_iter.next().ok_or_else(|| anyhow!("Wrong nonce."))?;
             if nonce_iter.next().is_some() {
                 return Err(anyhow!("Wrong nonce").into());
             }
-            let long_time_nonce = STANDARD_NO_PAD.decode(long_time_nonce_as_base64)?;
+            let signature = STANDARD_NO_PAD.decode(signature_as_base64)?;
+            // let long_time_nonce = STANDARD_NO_PAD.decode(long_time_nonce_as_base64)?;
             let short_time_nonce = STANDARD_NO_PAD.decode(short_time_nonce_as_base64)?;
             // FIXME: Verify no repeated short_time_nonce.
-            let hash = Sha256::digest(serialized_request.as_slice());
-            if verify_signature(signature).is_err() {
+            let hash = Sha256::digest(nonce_header.as_bytes());
+            if verify_signature(Signature::from_bytes(
+                signature.as_slice().into())?, &hash.into() as &[u8; 32], *verifying_key
+            ).is_err() {
                 return Ok(HttpResponse::new(StatusCode::NETWORK_AUTHENTICATION_REQUIRED));
             }
         } else {

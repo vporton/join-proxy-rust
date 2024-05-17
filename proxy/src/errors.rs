@@ -1,5 +1,6 @@
 use actix_web::{http::{header::ContentType, StatusCode}, HttpResponse, ResponseError};
 use http_for_actix::status::InvalidStatusCode;
+use k256::ecdsa;
 use thiserror::Error;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -17,6 +18,8 @@ pub enum MyError {
     MyCorruptedDB(MyCorruptedDBError),
     InvalidHeaderName(InvalidHeaderNameError),
     InvalidHeaderValue(InvalidHeaderValueError),
+    Base64Decode(base64::DecodeError),
+    Ecdsa(ecdsa::Error),
 }
 
 impl Display for MyError {
@@ -34,6 +37,8 @@ impl Display for MyError {
             Self::MyCorruptedDB(e) => Debug::fmt(&*e, f),
             Self::InvalidHeaderName(e) => Debug::fmt(&*e, f),
             Self::InvalidHeaderValue(e) => Debug::fmt(&*e, f),
+            Self::Base64Decode(e) => Debug::fmt(&*e, f),
+            Self::Ecdsa(e) => Debug::fmt(&*e, f),
         }
     }
 }
@@ -134,6 +139,18 @@ impl From<InvalidHeaderNameError> for MyError {
 impl From<InvalidHeaderValueError> for MyError {
     fn from(err: InvalidHeaderValueError) -> Self {
         Self::InvalidHeaderValue(err)
+    }
+}
+
+impl From<base64::DecodeError> for MyError {
+    fn from(err: base64::DecodeError) -> Self {
+        Self::Base64Decode(err)
+    }
+}
+
+impl From<ecdsa::Error> for MyError {
+    fn from(err: ecdsa::Error) -> Self {
+        Self::Ecdsa(err)
     }
 }
 
