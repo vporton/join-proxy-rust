@@ -12,9 +12,14 @@ clap = { version = "4.5.4", features = ["derive"] }
 derive_more = "0.99.17"
 http = "1.1.0"
 http_for_actix = { version = "0.2.11", package = "http" }
+k256 = "0.13.3"
+log = "0.4.21"
 reqwest = { version = "0.12.4", features = ["default-tls", "http2", "macos-system-configuration"] }
 serde = "1.0.201"
 serde_derive = "1.0.201"
 serde_json = "1.0.117"
 sha2 = "0.10.8"
 thiserror = "1.0.60"
+lib = { path = "../lib", package = "managed-proxy-lib"}
+ic-agent = "0.35.0"
+base64 = "0.22.1"

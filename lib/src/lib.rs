@@ -1,11 +1,11 @@
 use k256::ecdsa::{Signature, VerifyingKey};
 use serde_derive::{Deserialize, Serialize};
-use candid::{Encode, Decode, CandidType, Nat};
+use candid::{Encode, Decode, CandidType};
 use ic_agent::{agent::{PollResult, UpdateCall}, export::Principal, Agent, AgentError, RequestId};
 use k256::ecdsa::signature::hazmat::PrehashVerifier;
 use ic_cdk_macros::*;
 
-pub static canister_sign_key: &[&[u8; 4]; 4] = &[
+pub static CANISTER_SIGN_KEY: &[&[u8; 4]; 4] = &[
     // Random 128-bit key follows. Generated using `uuidgen -r` on Linux.
     &[0x7e, 0x0c, 0xc8, 0x36],
     &[0x1a, 0xce, 0x49, 0x2f],
@@ -15,7 +15,7 @@ pub static canister_sign_key: &[&[u8; 4]; 4] = &[
 
 /// TODO: Do we need to convert it to Vec<Vec<_>>?
 pub fn get_canister_sign_key() -> Vec<Vec<u8>> {
-    canister_sign_key.into_iter().map(|&t| t.to_vec()).collect::<Vec<Vec<_>>>()
+    CANISTER_SIGN_KEY.into_iter().map(|&t| t.to_vec()).collect::<Vec<Vec<_>>>()
 }
 
 #[derive(CandidType, Serialize)]
@@ -45,26 +45,27 @@ pub struct ECDSAPublicKeyReply {
 
 pub struct CanisterPublicKeyStatus {
     request_id: RequestId,
-    // effective_canister_id: Principal,
 }
 
 pub enum CanisterPublicKeyPollResult {
     Submitted,
     Accepted,
-    Completed(ECDSAPublicKeyReply),
+    Completed(VerifyingKey),
 }
 
 impl CanisterPublicKeyStatus {
     pub async fn poll(
         agent: &Agent,
-        request_id: &RequestId,
-    ) -> Result<CanisterPublicKeyPollResult, AgentError> {
-        let base = agent.poll(request_id, Principal::management_canister()).await?;
+        status: &CanisterPublicKeyStatus,
+    ) -> Result<CanisterPublicKeyPollResult, anyhow::Error> {
+        let base = agent.poll(&status.request_id, Principal::management_canister()).await?;
         Ok(match base {
             PollResult::Submitted => CanisterPublicKeyPollResult::Submitted,
             PollResult::Accepted => CanisterPublicKeyPollResult::Accepted,
-            PollResult::Completed(v) =>
-                CanisterPublicKeyPollResult::Completed(Decode!(v.as_slice(), ECDSAPublicKeyReply)?),
+            PollResult::Completed(v) => {
+                let res = Decode!(v.as_slice(), ECDSAPublicKeyReply)?;
+                CanisterPublicKeyPollResult::Completed(VerifyingKey::from_sec1_bytes(&res.public_key)?)
+            },
         })
     }
 }

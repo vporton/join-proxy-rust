@@ -1467,11 +1467,16 @@ dependencies = [
  "actix",
  "actix-web",
  "anyhow",
+ "base64 0.22.1",
  "bytes",
  "clap",
  "derive_more",
  "http 0.2.12",
  "http 1.1.0",
+ "ic-agent",
+ "k256",
+ "log",
+ "managed-proxy-lib",
  "reqwest",
  "serde",
  "serde_derive",
@@ -1567,9 +1572,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90ed8c1e510134f979dbc4f070f87d4313098b704861a105fe34231c70a3901c"
 
 [[package]]
-name = "managed_proxy_lib"
+name = "managed-proxy-lib"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "candid",
  "ic-agent",
  "ic-cdk-macros",

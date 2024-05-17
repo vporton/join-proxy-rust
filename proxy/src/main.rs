@@ -3,15 +3,23 @@ mod cache;
 
 use std::{fs::File, str::{from_utf8, FromStr}, sync::{Arc, Mutex}, time::Duration};
 
+use actix::clock::sleep;
+use base64::{engine::general_purpose::STANDARD_NO_PAD, Engine};
+use lib::{get_canister_pubkey, verify_signature, CanisterPublicKeyPollResult, CanisterPublicKeyStatus};
+use log::{error, info};
+use serde::{Deserializer};
 use sha2::Digest;
 use actix_web::{body::BoxBody, http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use cache::cache::{Cache, Key, Value};
 use clap::Parser;
 use errors::{InvalidHeaderNameError, InvalidHeaderValueError, MyCorruptedDBError, MyResult};
 use reqwest::ClientBuilder;
 use serde_derive::Deserialize;
 use sha2::Sha256;
+use k256::ecdsa::{Signature, VerifyingKey};
+use ic_agent::{export::Principal, Agent};
+use serde::de::Error;
 
 use crate::cache::mem_cache::MemCache;
 
@@ -41,6 +49,11 @@ struct Config {
     upstream_read_timeout: Duration,
     #[serde(default="default_add_forwarded_from_header")]
     add_forwarded_from_header: bool,
+    ic_url: Option<String>,
+    #[serde(default="default_ic_local")]
+    ic_local: bool,
+    #[serde(deserialize_with = "deserialize_canister_id")]
+    signing_canister_id: Option<Principal>,
 }
 
 fn default_port() -> u16 {
@@ -63,8 +76,29 @@ fn default_add_forwarded_from_header() -> bool {
     false // Isn't it useless?
 }
 
+fn default_ic_local() -> bool {
+    false
+}
+
+fn deserialize_canister_id<'de, D>(deserializer: D) -> Result<Option<Principal>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let input: Option<String> = serde::Deserialize::deserialize(deserializer)?;
+    if let Some(input) = input {
+        match Principal::from_text(input) {
+            Ok(principal) => Ok(Some(principal)),
+            Err(principal_error) =>
+                Err(D::Error::custom(format!("Invalid principal: {}", principal_error))),
+        }
+    } else {
+        Ok(None)
+    }
+}
+
 struct State {
     client: reqwest::Client,
+    verifying_key: Option<VerifyingKey>,
     additional_response_headers: Arc<Vec<(http_for_actix::HeaderName, http_for_actix::HeaderValue)>>,
     response_headers_to_remove: Arc<Vec<http_for_actix::HeaderName>>,
 }
@@ -236,9 +270,8 @@ async fn proxy(
     cache: Data<Arc<Mutex<&mut dyn Cache>>>,
     state: Data<State>, 
 )
-    -> MyResult<actix_web::HttpResponse>
+    -> anyhow::Result<actix_web::HttpResponse>
 {
-    // TODO: Add more secure auth.
     if let Some(our_secret) = &config.our_secret {
         let passed_key = req.headers()
             .get("x-joinproxy-key")
@@ -248,12 +281,33 @@ async fn proxy(
             return Ok(HttpResponse::new(StatusCode::NETWORK_AUTHENTICATION_REQUIRED));
         }
     }
+    if let Some(verifying_key) = &state.verifying_key {
+        if let (Some(nonce), Some(signature)) =
+            (req.headers().get("nonce"), req.headers().get("signature"))
+        {
+            let nonce_iter = nonce.as_bytes().split(|&c| c == b':');
+            let long_time_nonce_as_base64 = nonce_iter.next().ok_or_else(|| Err("Wrong nonce."))?;
+            let short_time_nonce_as_base64 = nonce_iter.next().ok_or_else(|| Err("Wrong nonce."))?;
+            if nonce_iter.next().is_some() {
+                return Err(anyhow!("Wrong nonce").into());
+            }
+            let long_time_nonce = STANDARD_NO_PAD.decode(long_time_nonce_as_base64)?;
+            let short_time_nonce = STANDARD_NO_PAD.decode(short_time_nonce_as_base64)?;
+            // FIXME: Verify no repeated short_time_nonce.
+            let hash = Sha256::digest(serialized_request.as_slice());
+            if verify_signature(signature).is_err() {
+                return Ok(HttpResponse::new(StatusCode::NETWORK_AUTHENTICATION_REQUIRED));
+            }
+        } else {
+            return Ok(HttpResponse::new(StatusCode::NETWORK_AUTHENTICATION_REQUIRED));
+        }
+    }
 
     serve(req, body, config, cache, state).await
 }
 
 #[actix_web::main]
-async fn main() -> MyResult<()> {
+async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let file = File::open(&args.config_file)
         .map_err(|e| anyhow!("Cannot open config file {}: {}", args.config_file, e))?;
@@ -284,6 +338,42 @@ async fn main() -> MyResult<()> {
     let response_headers_to_remove = response_headers_to_remove.collect::<MyResult<Vec<_>>>()?;
     let response_headers_to_remove = Arc::new(response_headers_to_remove);
 
+    // TODO: Download verifying key in parallel with serving.
+
+    let agent = {
+        let mut builder = Agent::builder();
+        if let Some(ic_url) = &config.ic_url {
+            builder = builder.with_url(ic_url);
+        }
+        builder.build()?
+    };
+    if config.ic_local {
+        agent.fetch_root_key().await?;
+    }
+
+    let verifying_key =
+        if let Some(signing_canister_id) = config.signing_canister_id {
+            'b: {
+                let verifying_key_status = get_canister_pubkey(&agent, signing_canister_id).await?;
+                for i in 0..20 { // TODO: Make configurable.
+                    info!("Downloading the key, attempt {}", i+1);
+                    match CanisterPublicKeyStatus::poll(&agent, &verifying_key_status).await {
+                        Ok(CanisterPublicKeyPollResult::Submitted) => {}
+                        Ok(CanisterPublicKeyPollResult::Completed(key)) => {
+                            break 'b Some(key);
+                        }
+                        Ok(CanisterPublicKeyPollResult::Accepted) => bail!("Canister key disappeared."),
+                        Err(err) => bail!("Failed to load canister key: {err}"),
+                    }
+                    sleep(Duration::from_millis(500)).await; // TODO: Make configurable.
+                }
+
+                bail!("Cannot load canister public key!");
+            }
+        } else {
+            None
+        };
+
     HttpServer::new(move || {
         let state = State {
             client: ClientBuilder::new()
@@ -292,6 +382,7 @@ async fn main() -> MyResult<()> {
                 .build().unwrap(),
             additional_response_headers: additional_response_headers.clone(),
             response_headers_to_remove: response_headers_to_remove.clone(),
+            verifying_key,
         };
         App::new().service(
             web::scope("")
