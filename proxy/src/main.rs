@@ -286,7 +286,7 @@ async fn proxy(
             (req.headers().get("nonce"), req.headers().get("signature"))
         {
             let mut nonce_iter = nonce_header.as_bytes().split(|&c| c == b':');
-            let long_time_nonce_as_base64 = nonce_iter.next().ok_or_else(|| anyhow!("Wrong nonce."))?;
+            // let long_time_nonce_as_base64 = nonce_iter.next().ok_or_else(|| anyhow!("Wrong nonce."))?;
             let short_time_nonce_as_base64 = nonce_iter.next().ok_or_else(|| anyhow!("Wrong nonce."))?;
             if nonce_iter.next().is_some() {
                 return Err(anyhow!("Wrong nonce").into());
