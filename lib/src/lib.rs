@@ -1,9 +1,8 @@
 use k256::ecdsa::{Signature, VerifyingKey};
 use serde_derive::{Deserialize, Serialize};
 use candid::{Encode, Decode, CandidType};
-use ic_agent::{agent::{PollResult, UpdateCall}, export::Principal, Agent, AgentError, RequestId};
+use ic_agent::{agent::PollResult, export::Principal, Agent, AgentError, RequestId};
 use k256::ecdsa::signature::hazmat::PrehashVerifier;
-use ic_cdk_macros::*;
 
 pub static CANISTER_SIGN_KEY: &[&[u8; 4]; 4] = &[
     // Random 128-bit key follows. Generated using `uuidgen -r` on Linux.

@@ -6,8 +6,8 @@ use std::{fs::File, str::{from_utf8, FromStr}, sync::{Arc, Mutex}, time::Duratio
 use actix::clock::sleep;
 use base64::{engine::general_purpose::STANDARD_NO_PAD, Engine};
 use lib::{get_canister_pubkey, verify_signature, CanisterPublicKeyPollResult, CanisterPublicKeyStatus};
-use log::{error, info};
-use serde::{Deserializer};
+use log::info;
+use serde::Deserializer;
 use sha2::Digest;
 use actix_web::{body::BoxBody, http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
 use anyhow::{anyhow, bail};
