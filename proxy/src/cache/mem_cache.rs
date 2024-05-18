@@ -1,9 +1,42 @@
-use std::{collections::HashMap, time::{Duration, SystemTime}};
+use std::{collections::HashMap, ops::{Deref, DerefMut}, sync::{Mutex, MutexGuard, PoisonError}, time::{Duration, SystemTime}};
 use std::collections::BTreeMap;
 
 use crate::{cache::cache::Cache, errors::MyResult};
 
-use super::cache::{Key, Value};
+use super::cache::{Key, Locker, LockerGuard, Value};
+
+pub struct MemCacheLockerGuard<'a, T: ?Sized + 'a>(MutexGuard<'a, T>);
+
+impl<'a, T: ?Sized + 'a> LockerGuard<'a, T> for MemCacheLockerGuard<'a, T> {}
+
+impl<'a, T: ?Sized + 'a> Deref for MemCacheLockerGuard<'a, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.0.deref()
+    }
+}
+
+impl<'a, T: ?Sized + 'a> DerefMut for MemCacheLockerGuard<'a, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.0.deref_mut()
+    }
+}
+
+type MemCacheLockResult<Guard> = Result<Guard, PoisonError<Guard>>;
+
+pub struct MemCacheLocker(Mutex<Option<Vec<u8>>>);
+
+impl<T> Locker<T> for MemCacheLocker {
+    type LockError = PoisonError<T>;
+    type LockerGuard<'a> = MemCacheLockerGuard<'a, T> where Self: 'a, T: 'a;
+    // type LockResult<'a> = Result<MemCacheLockerGuard<'a, T>, Self::LockError>;
+    
+    fn lock(&self) -> Result<Self::LockerGuard<'_>, PoisonError<T>> {
+        self.0.lock()
+    }
+    
+}
 
 pub struct MemCache {
     data: HashMap<Vec<u8>, Vec<u8>>,
@@ -22,21 +55,11 @@ impl MemCache {
 }
 
 impl Cache for MemCache {
+    type EntryLock = MemCacheLocker;
     fn keep_duration(&self) -> Duration {
         self.keep_duration
     }
-    fn put(&mut self, key: Key, value: Value) -> MyResult<()> {
-        self.data.insert(Vec::from(key.0), Vec::from(value.0));
-        let time = SystemTime::now();
-        self.put_times
-            .entry(time)
-            .and_modify(|v| v.push(Vec::from(value.0)))
-            .or_insert_with(|| vec![Vec::from(value.0)]);
-
-        Ok(())
-    }
-
-    fn get(&mut self, key: Key) -> MyResult<Option<&Vec<u8>>> {
+    fn get(&mut self, key: Key) -> MyResult<Self::EntryLock> {
         // Remove expired entries.
         let time_threshold = SystemTime::now() - self.keep_duration;
         while let Some(kv) = self.put_times.first_key_value() {
@@ -49,5 +72,15 @@ impl Cache for MemCache {
         }
 
         Ok(self.data.get(&Vec::from(key.0)))
+    }
+    fn put(&mut self, key: Key, value: Value) -> MyResult<()> {
+        self.data.insert(Vec::from(key.0), Vec::from(value.0));
+        let time = SystemTime::now();
+        self.put_times
+            .entry(time)
+            .and_modify(|v| v.push(Vec::from(value.0)))
+            .or_insert_with(|| vec![Vec::from(value.0)]);
+
+        Ok(())
     }
 }

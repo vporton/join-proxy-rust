@@ -133,7 +133,9 @@ async fn serve(
 {
     let serialized_request = serialize_http_request(&req, &body)?;
 
+    // Lock for the entire duration of the outcall's call.
     let mut cache = cache.lock().unwrap();
+
     let response = &mut if let Some(serialize_response) =
         cache.get(Key(serialized_request.as_slice()))?
     {
