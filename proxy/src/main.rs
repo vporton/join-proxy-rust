@@ -1,5 +1,6 @@
 mod errors;
 mod cache;
+mod config;
 
 use std::{fs::File, str::{from_utf8, FromStr}, sync::{Arc, Mutex}, time::Duration};
 
@@ -7,7 +8,6 @@ use actix::clock::sleep;
 use base64::{engine::general_purpose::STANDARD_NO_PAD, Engine};
 use lib::{get_canister_pubkey, verify_signature, CanisterPublicKeyPollResult, CanisterPublicKeyStatus};
 use log::info;
-use serde::Deserializer;
 use sha2::Digest;
 use actix_web::{body::BoxBody, http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
 use anyhow::{anyhow, bail};
@@ -15,85 +15,18 @@ use cache::cache::{Cache, Key, Value};
 use clap::Parser;
 use errors::{InvalidHeaderNameError, InvalidHeaderValueError, MyCorruptedDBError, MyResult};
 use reqwest::ClientBuilder;
-use serde_derive::Deserialize;
 use sha2::Sha256;
 use k256::ecdsa::{Signature, VerifyingKey};
-use ic_agent::{export::Principal, Agent};
-use serde::de::Error;
+use ic_agent::Agent;
 
 use crate::cache::mem_cache::MemCache;
+use crate::config::Config;
 
 #[derive(clap::Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
     #[arg(short, long="config", default_value="config.json")]
     config_file: String,
-}
-
-#[derive(Clone, Deserialize, Debug)]
-struct Config {
-    #[serde(default="default_port")]
-    port: u16,
-    our_secret: Option<String>, // simple Bearer authentication
-    upstream_prefix: Option<String>,
-    cache_timeout: Duration,
-    remove_request_headers: Vec<String>,
-    add_request_headers: Vec<(String, String)>,
-    remove_response_headers: Vec<String>,
-    add_response_headers: Vec<(String, String)>,
-    #[serde(default="default_show_hit_miss")]
-    show_hit_miss: bool,
-    #[serde(default="default_upstream_connect_timeout")]
-    upstream_connect_timeout: Duration,
-    #[serde(default="default_upstream_read_timeout")]
-    upstream_read_timeout: Duration,
-    #[serde(default="default_add_forwarded_from_header")]
-    add_forwarded_from_header: bool,
-    ic_url: Option<String>,
-    #[serde(default="default_ic_local")]
-    ic_local: bool,
-    #[serde(deserialize_with = "deserialize_canister_id")]
-    signing_canister_id: Option<Principal>,
-}
-
-fn default_port() -> u16 {
-    8080
-}
-
-fn default_show_hit_miss() -> bool {
-    true
-}
-
-fn default_upstream_connect_timeout() -> Duration {
-    Duration::from_secs(10)
-}
-
-fn default_upstream_read_timeout() -> Duration {
-    Duration::from_secs(60) // I set it big, for the use case of OpenAI API
-}
-
-fn default_add_forwarded_from_header() -> bool {
-    false // Isn't it useless?
-}
-
-fn default_ic_local() -> bool {
-    false
-}
-
-fn deserialize_canister_id<'de, D>(deserializer: D) -> Result<Option<Principal>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let input: Option<String> = serde::Deserialize::deserialize(deserializer)?;
-    if let Some(input) = input {
-        match Principal::from_text(input) {
-            Ok(principal) => Ok(Some(principal)),
-            Err(principal_error) =>
-                Err(D::Error::custom(format!("Invalid principal: {}", principal_error))),
-        }
-    } else {
-        Ok(None)
-    }
 }
 
 struct State {
