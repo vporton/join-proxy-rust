@@ -23,3 +23,4 @@ thiserror = "1.0.60"
 lib = { path = "../lib", package = "managed-proxy-lib"}
 ic-agent = "0.35.0"
 base64 = "0.22.1"
+lock_api = "0.4.12"

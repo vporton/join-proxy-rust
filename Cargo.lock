@@ -1475,6 +1475,7 @@ dependencies = [
  "http 1.1.0",
  "ic-agent",
  "k256",
+ "lock_api",
  "log",
  "managed-proxy-lib",
  "reqwest",

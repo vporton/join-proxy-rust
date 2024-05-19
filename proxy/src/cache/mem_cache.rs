@@ -25,15 +25,14 @@ impl<'a, T: ?Sized + 'a> DerefMut for MemCacheLockerGuard<'a, T> {
 
 type MemCacheLockResult<Guard> = Result<Guard, PoisonError<Guard>>;
 
-pub struct MemCacheLocker(Mutex<Option<Vec<u8>>>);
+pub struct MemCacheLocker<T>(Mutex<Option<T>>);
 
-impl<T> Locker<T> for MemCacheLocker {
-    type LockError = PoisonError<T>;
-    type LockerGuard<'a> = MemCacheLockerGuard<'a, T> where Self: 'a, T: 'a;
-    // type LockResult<'a> = Result<MemCacheLockerGuard<'a, T>, Self::LockError>;
-    
-    fn lock(&self) -> Result<Self::LockerGuard<'_>, PoisonError<T>> {
-        self.0.lock()
+impl<T> Locker<Option<T>> for MemCacheLocker<T> {
+    type LockError = PoisonError<Self::LockerGuard<'a>> where T: 'a;
+    type LockerGuard<'a> = MemCacheLockerGuard<'a, Option<T>> where Self: 'a, T: 'a;
+
+    fn lock(&self) -> Result<Self::LockerGuard<'a>, Self::LockError<'a>> {
+        Ok(MemCacheLockerGuard(self.0.lock()?))
     }
     
 }

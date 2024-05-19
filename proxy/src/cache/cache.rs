@@ -1,16 +1,12 @@
+use std::sync::{Mutex, MutexGuard};
+use std::ops::Deref;
+use std::fmt::Debug;
 use std::{ops::{Deref, DerefMut}, time::Duration};
 use crate::errors::MyResult;
 
 pub struct Key<'a>(pub &'a [u8]);
 pub struct Value<'a>(pub &'a [u8]);
 
-pub trait LockerGuard<'a, T: ?Sized + 'a>: Deref<Target = T> + DerefMut<Target = T> {}
-
-pub trait Locker<T: ?Sized> {
-    type LockError;
-    type LockerGuard<'a>: LockerGuard<'a, T> where T: 'a, Self: 'a;
-    fn lock(&self) -> Result<Self::LockerGuard<'_>, Self::LockError>;
-}
 
 pub trait Cache {
     type EntryLock: ?Sized;
