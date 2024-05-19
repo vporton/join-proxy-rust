@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 use std::sync::{LockResult, TryLockResult};
 
+// FIXME: use async mutex.
+
 trait MutexGuard<'a, T: ?Sized + 'a>: Deref<Target = T> /*+ DerefMut<Target = T>*/ {
     fn set(&mut self, value: T);
 }
