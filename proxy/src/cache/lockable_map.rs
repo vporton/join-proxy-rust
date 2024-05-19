@@ -2,9 +2,15 @@ use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 use std::sync::{LockResult, TryLockResult};
 
-trait MutexGuard<'a, T: ?Sized + 'a>: Deref<Target = T> + DerefMut<Target = T> {}
+trait MutexGuard<'a, T: ?Sized + 'a>: Deref<Target = T> /*+ DerefMut<Target = T>*/ {
+    fn set(&mut self, value: T);
+}
 
-impl<'a, T: ?Sized + 'a> MutexGuard<'a, T> for std::sync::MutexGuard<'a, T> {}
+impl<'a, T: ?Sized + 'a> MutexGuard<'a, T> for std::sync::MutexGuard<'a, T> {
+    fn set(&mut self, value: T) {
+        *self.deref_mut() = value;
+    }
+}
 
 // TODO: more abstract error handling
 trait Mutex<T: ?Sized> {
@@ -34,15 +40,15 @@ impl<T: ?Sized> Mutex<T> for std::sync::Mutex<T> {
 }
 
 trait AbstractLockableMap<'a, K, V> {
-    type Guard: MutexGuard<'a, V>;
+    type Guard: MutexGuard<'a, Option<V>>;
 
     fn lock(&mut self, key: K) -> Self::Guard;
 
-    fn insert(&mut self, key: K, value: V);
+    // fn insert(&mut self, key: K, value: V);
 
-    fn get(&self, key: &K) -> Option<Self::Guard> {
-        self.map.get(key).map(|mutex| mutex.lock().unwrap())
-    }
+    // fn get(&self, key: &K) -> Option<Self::Guard> {
+    //     self.map.get(key).map(|mutex| mutex.lock().unwrap())
+    // }
 }
 
 struct LockableMap<K, V> {
@@ -55,7 +61,8 @@ impl<K, V> LockableMap<K, V> {
     }
 }
 
-impl<'a, K, V> AbstractLockableMap<'a, K, Option<V>> for LockableMap<K, V> 
+// Code based on https://g.co/gemini/share/5045754c1381
+impl<'a, K, V> AbstractLockableMap<'a, K, V> for LockableMap<K, V> 
 where
     K: std::hash::Hash + Eq + Clone, // TODO: Is `Clone` needed?
     V: 'a
@@ -69,12 +76,12 @@ where
             .unwrap()
     }
 
-    fn insert(&mut self, key: K, value: V) {
-        let mut lock = self.lock(key); // Lock the key first
-        *lock = Some(value); // Then insert the value
-    }
+    // fn insert(&mut self, key: K, value: V) {
+    //     let mut lock = self.lock(key); // Lock the key first
+    //     *lock = Some(value); // Then insert the value
+    // }
 
-    fn get(&self, key: &K) -> Option<MutexGuard<'_, Option<V>>> {
-        self.map.get(key).map(|mutex| mutex.lock().unwrap())
-    }
+    // fn get(&self, key: &K) -> Option<MutexGuard<'_, Option<V>>> {
+    //     self.map.get(key).map(|mutex| mutex.lock().unwrap())
+    // }
 }
