@@ -134,11 +134,12 @@ async fn serve(
     let serialized_request = serialize_http_request(&req, &body)?;
 
     // Lock for the entire duration of the outcall's call.
-    let mut cache = cache.lock().unwrap();
+    let mut cache = cache.lock().unwrap(); // FIXME: Should use future_parking_lot awaitable Mutex.
 
     let response = &mut if let Some(serialize_response) =
         cache.get(Key(serialized_request.as_slice()))?
     {
+        // TODO: Unlock here to block less time.
         let mut response = deserialize_http_response(serialize_response)?;
         if config.show_hit_miss {
             response.headers_mut().append(
@@ -163,7 +164,7 @@ async fn serve(
         }
 
         // TODO: After which headers modifications to put this block?
-        let hash = Sha256::digest(serialized_request.as_slice());
+        let hash = Sha256::digest(serialized_request.as_slice()); // FIXME: Hash only nonce
         cache.put(Key(&hash), Value(serialize_http_response(reqwest_response, body.clone())?.as_slice()))?;
 
         if config.show_hit_miss {
