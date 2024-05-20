@@ -204,7 +204,7 @@ async fn proxy(
     req: actix_web::HttpRequest,
     body: web::Bytes,
     config: Data<Config>,
-    cache: Data<Arc<Mutex<&mut BinaryCache>>>,
+    cache: Data<Arc<Mutex<&mut dyn Cache<Vec<u8>, Vec<u8>>>>>,
     state: Data<State>, 
 )
     -> MyResult<actix_web::HttpResponse>
@@ -256,7 +256,7 @@ async fn main() -> anyhow::Result<()> {
 
     let server_url = "localhost:".to_string() + config.port.to_string().as_str();
 
-    let cache = Arc::new(Mutex::new(MemCache::new(config.cache_timeout)));
+    let cache = Arc::new(Mutex::new(BinaryMemCache::new(config.cache_timeout)));
 
     let additional_response_headers = &config.add_request_headers;
     let additional_response_headers = additional_response_headers.into_iter().map(
