@@ -27,7 +27,8 @@ impl<K, V> MemCache<K, V> {
 #[async_trait]
 impl<K, V> Cache<K, V> for MemCache<K, V>
 where
-    K: Clone + Hash + std::cmp::Eq + std::marker::Sync + std::marker::Send, // TODO: Check this.
+    // TODO: superfluous conditions?
+    K: Clone + Hash + std::cmp::Eq + std::marker::Sync + std::marker::Send,
     V: std::marker::Send,
 {
     // type Guard<'a> = tokio::sync::MutexGuard<'a, Option<V>> where Self: 'a, V: 'a;
