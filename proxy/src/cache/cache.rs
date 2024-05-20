@@ -10,7 +10,7 @@ pub trait Cache<K, V> {
     // async fn lock<'a>(&'a mut self, key: &K) -> MyResult<Self::Guard<'a>> where V: 'a;
     async fn lock<'a>(&'a mut self, key: &K) -> MyResult<Box<dyn MutexGuard<Option<V>> + 'a>> where V: 'a;
 
-    async fn put(&mut self, key: K, value: V) -> MyResult<()>;
+    // async fn put(&mut self, key: K, value: V) -> MyResult<()>;
 }
 
 pub type BinaryCache = dyn Cache<Vec<u8>, Vec<u8>>;

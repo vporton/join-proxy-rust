@@ -105,47 +105,47 @@ where
     }
 }
 
-pub struct LockableBTreeMap<K, V> {
-    map: BTreeMap<K, tokio::sync::Mutex<Option<V>>>,
-}
+// pub struct LockableBTreeMap<K, V> {
+//     map: BTreeMap<K, tokio::sync::Mutex<Option<V>>>,
+// }
 
-impl<K, V> LockableBTreeMap<K, V> {
-    pub fn new() -> Self {
-        Self { map: BTreeMap::new() }
-    }
-}
+// impl<K, V> LockableBTreeMap<K, V> {
+//     pub fn new() -> Self {
+//         Self { map: BTreeMap::new() }
+//     }
+// }
 
-impl<K, V> AbstractLockableMap<K, V> for LockableBTreeMap<K, V> 
-where
-    K: std::hash::Hash + Eq + Clone + Ord, // TODO: Is `Clone` needed?
-    V: std::marker::Send, // TODO: It is an over-specification.
-{
-    type Guard<'a> = tokio::sync::MutexGuard<'a, Option<V>> where K: 'a, V: 'a;
+// impl<K, V> AbstractLockableMap<K, V> for LockableBTreeMap<K, V> 
+// where
+//     K: std::hash::Hash + Eq + Clone + Ord, // TODO: Is `Clone` needed?
+//     V: std::marker::Send, // TODO: It is an over-specification.
+// {
+//     type Guard<'a> = tokio::sync::MutexGuard<'a, Option<V>> where K: 'a, V: 'a;
 
-    async fn lock(&mut self, key: &K) -> tokio::sync::MutexGuard<Option<V>> {
-        self.map.entry(key.clone())
-            .or_insert_with(|| tokio::sync::Mutex::new(None))
-            .lock()
-            .await
-    }
+//     async fn lock(&mut self, key: &K) -> tokio::sync::MutexGuard<Option<V>> {
+//         self.map.entry(key.clone())
+//             .or_insert_with(|| tokio::sync::Mutex::new(None))
+//             .lock()
+//             .await
+//     }
 
-    // fn insert(&mut self, key: K, value: V) {
-    //     let mut lock = self.lock(key); // Lock the key first
-    //     *lock = Some(value); // Then insert the value
-    // }
+//     // fn insert(&mut self, key: K, value: V) {
+//     //     let mut lock = self.lock(key); // Lock the key first
+//     //     *lock = Some(value); // Then insert the value
+//     // }
 
-    // fn get(&self, key: &K) -> Option<MutexGuard<'_, Option<V>>> {
-    //     self.map.get(key).map(|mutex| mutex.lock().unwrap())
-    // }
+//     // fn get(&self, key: &K) -> Option<MutexGuard<'_, Option<V>>> {
+//     //     self.map.get(key).map(|mutex| mutex.lock().unwrap())
+//     // }
 
-    // TODO: Move the functionality to `MutexGuard`?
-    // FIXME: nona-atomic operation
-    // async fn remove(&mut self, key: &K) {
-    //     let mut lock = self.lock(key).await;
-    //     lock.set(None);
-    // }
+//     // TODO: Move the functionality to `MutexGuard`?
+//     // FIXME: nona-atomic operation
+//     // async fn remove(&mut self, key: &K) {
+//     //     let mut lock = self.lock(key).await;
+//     //     lock.set(None);
+//     // }
 
-    async fn remove(&mut self, key: &K) {
-        self.map.remove(key);
-    }
-}
+//     async fn remove(&mut self, key: &K) {
+//         self.map.remove(key);
+//     }
+// }

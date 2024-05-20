@@ -11,7 +11,7 @@ use log::info;
 use sha2::Digest;
 use actix_web::{body::BoxBody, http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
 use anyhow::{anyhow, bail};
-use cache::{cache::{BinaryCache, Cache}, mem_cache::BinaryMemCache};
+use cache::{cache::BinaryCache, mem_cache::BinaryMemCache};
 use clap::Parser;
 use errors::{InvalidHeaderNameError, InvalidHeaderValueError, MyCorruptedDBError, MyResult};
 use reqwest::ClientBuilder;
@@ -19,7 +19,6 @@ use sha2::Sha256;
 use k256::ecdsa::{Signature, VerifyingKey};
 use ic_agent::Agent;
 
-use crate::cache::mem_cache::MemCache;
 use crate::config::Config;
 
 #[derive(clap::Parser, Debug)]
@@ -126,7 +125,7 @@ async fn serve(
     req: actix_web::HttpRequest,
     body: web::Bytes,
     config: Data<Config>,
-    cache: Data<Arc<Mutex<&mut dyn Cache<Vec<u8>, Vec<u8>>>>>,
+    cache: Data<Arc<Mutex<&mut BinaryCache>>>,
     state: Data<State>,
 )
     -> MyResult<actix_web::HttpResponse<BoxBody>>
@@ -204,7 +203,7 @@ async fn proxy(
     req: actix_web::HttpRequest,
     body: web::Bytes,
     config: Data<Config>,
-    cache: Data<Arc<Mutex<&mut dyn Cache<Vec<u8>, Vec<u8>>>>>,
+    cache: Data<Arc<Mutex<&mut BinaryCache>>>,
     state: Data<State>, 
 )
     -> MyResult<actix_web::HttpResponse>
