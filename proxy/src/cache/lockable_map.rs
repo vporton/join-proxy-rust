@@ -1,23 +1,25 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::ops::{Deref, DerefMut};
-use std::sync::{LockResult, TryLockResult};
 
 use tokio::sync::TryLockError;
 
-// FIXME: use async mutex.
-
-trait MutexGuard<T: ?Sized>: Deref<Target = T> /*+ DerefMut<Target = T>*/ {
+pub trait MutexGuard<T>: Deref<Target = T> /*+ DerefMut<Target = T>*/ {
     fn set(&mut self, value: T);
+    // fn remove(&self);
 }
 
-impl<T: ?Sized> MutexGuard<T> for tokio::sync::MutexGuard<'_, T> {
+impl<T> MutexGuard<T> for tokio::sync::MutexGuard<'_, T> {
     fn set(&mut self, value: T) {
         *self.deref_mut() = value;
     }
+
+    // fn remove(&self) {
+    //     *self.deref_mut() = None;
+    // }
 }
 
 // TODO: more abstract error handling
-trait Mutex<T: ?Sized> {
+pub trait Mutex<T> {
     // fn get_mut(&mut self) -> LockResult<&mut T>; // not available for Redis
     fn into_inner(self) -> T
         where
@@ -26,7 +28,7 @@ trait Mutex<T: ?Sized> {
     fn try_lock(&self) -> Result<impl MutexGuard<T>, TryLockError>;
 }
 
-impl<T: ?Sized> Mutex<T> for tokio::sync::Mutex<T> {
+impl<T> Mutex<T> for tokio::sync::Mutex<T> {
     fn into_inner(self) -> T
         where
             T: Sized
@@ -43,36 +45,38 @@ impl<T: ?Sized> Mutex<T> for tokio::sync::Mutex<T> {
     }
 }
 
-trait AbstractLockableMap<K, V> {
+pub trait AbstractLockableMap<K, V> {
     type Guard<'a>: MutexGuard<Option<V>> where Self: 'a;
 
-    async fn lock(&mut self, key: K) -> Self::Guard<'_>;
+    async fn lock(&mut self, key: &K) -> Self::Guard<'_>;
 
     // fn insert(&mut self, key: K, value: V);
 
     // fn get(&self, key: &K) -> Option<Self::Guard> {
     //     self.map.get(key).map(|mutex| mutex.lock().unwrap())
     // }
+
+    async fn remove(&mut self, key: &K);
 }
 
-struct LockableMap<K, V> {
+pub struct LockableHashMap<K, V> {
     map: HashMap<K, tokio::sync::Mutex<Option<V>>>,
 }
 
-impl<K, V> LockableMap<K, V> {
+impl<K, V> LockableHashMap<K, V> {
     pub fn new() -> Self {
         Self { map: HashMap::new() }
     }
 }
 
 // Code based on https://g.co/gemini/share/5045754c1381
-impl<K, V> AbstractLockableMap<K, V> for LockableMap<K, V> 
+impl<K, V> AbstractLockableMap<K, V> for LockableHashMap<K, V> 
 where
     K: std::hash::Hash + Eq + Clone, // TODO: Is `Clone` needed?
 {
     type Guard<'a> = tokio::sync::MutexGuard<'a, Option<V>> where K: 'a, V: 'a;
 
-    async fn lock(&mut self, key: K) -> tokio::sync::MutexGuard<Option<V>> {
+    async fn lock(&mut self, key: &K) -> tokio::sync::MutexGuard<Option<V>> {
         self.map.entry(key.clone())
             .or_insert_with(|| tokio::sync::Mutex::new(None))
             .lock()
@@ -87,4 +91,52 @@ where
     // fn get(&self, key: &K) -> Option<MutexGuard<'_, Option<V>>> {
     //     self.map.get(key).map(|mutex| mutex.lock().unwrap())
     // }
+
+    async fn remove(&mut self, key: &K) {
+        self.map.remove(key);
+    }
+}
+
+pub struct LockableBTreeMap<K, V> {
+    map: BTreeMap<K, tokio::sync::Mutex<Option<V>>>,
+}
+
+impl<K, V> LockableBTreeMap<K, V> {
+    pub fn new() -> Self {
+        Self { map: BTreeMap::new() }
+    }
+}
+
+impl<K, V> AbstractLockableMap<K, V> for LockableBTreeMap<K, V> 
+where
+    K: std::hash::Hash + Eq + Clone + Ord, // TODO: Is `Clone` needed?
+{
+    type Guard<'a> = tokio::sync::MutexGuard<'a, Option<V>> where K: 'a, V: 'a;
+
+    async fn lock(&mut self, key: &K) -> tokio::sync::MutexGuard<Option<V>> {
+        self.map.entry(key.clone())
+            .or_insert_with(|| tokio::sync::Mutex::new(None))
+            .lock()
+            .await
+    }
+
+    // fn insert(&mut self, key: K, value: V) {
+    //     let mut lock = self.lock(key); // Lock the key first
+    //     *lock = Some(value); // Then insert the value
+    // }
+
+    // fn get(&self, key: &K) -> Option<MutexGuard<'_, Option<V>>> {
+    //     self.map.get(key).map(|mutex| mutex.lock().unwrap())
+    // }
+
+    // TODO: Move the functionality to `MutexGuard`?
+    // FIXME: nona-atomic operation
+    // async fn remove(&mut self, key: &K) {
+    //     let mut lock = self.lock(key).await;
+    //     lock.set(None);
+    // }
+
+    async fn remove(&mut self, key: &K) {
+        self.map.remove(key);
+    }
 }

@@ -1,66 +1,69 @@
-use std::{collections::HashMap, ops::{Deref, DerefMut}, sync::PoisonError, time::{Duration, SystemTime}};
+use std::hash::Hash;
+use std::time::{Duration, SystemTime};
 use std::collections::BTreeMap;
-use std::cmp::{Eq, Hash};
+use super::lockable_map::{AbstractLockableMap, LockableHashMap, MutexGuard};
 
-use actix_web::guard::Guard;
-use lock_api::{GuardNoSend,};
-use lockable::{Lockable, LockableHashMap};
+use async_trait::async_trait;
+use tokio::sync::Mutex;
 
 use crate::{cache::cache::Cache, errors::MyResult};
 
-pub struct MemCache {
-    data: LockableHashMap<Vec<u8>, Vec<u8>>,
-    put_times: BTreeMap<SystemTime, Vec<Vec<u8>>>, // time -> keys
+pub struct MemCache<K, V> {
+    data: LockableHashMap<K, V>,
+    put_times: Mutex<BTreeMap<SystemTime, Vec<K>>>,
     keep_duration: Duration,
 }
 
-impl MemCache {
+impl<K, V> MemCache<K, V> {
     pub fn new(keep_duration: Duration) -> Self {
         Self {
             data: LockableHashMap::new(),
-            put_times: BTreeMap::new(),
+            put_times: Mutex::new(BTreeMap::new()),
             keep_duration,
         }
     }
 }
 
-impl<K, V> Cache<K, V> for MemCache {
-    type Guard<'a> = <LockableHashMap<K, V> as Lockable<K, V>>::Guard<'a>
-        where
-            K: 'a + Eq + Hash,
-            V: 'a;
-    fn keep_duration(&self) -> Duration {
-        self.keep_duration
-    }
-    fn get(&mut self, key: K) -> MyResult<parking_lot::Mutex<Vec<u8>>> {
+#[async_trait]
+impl<K, V> Cache<K, V> for MemCache<K, V>
+where
+    K: Clone + Hash + std::cmp::Eq + std::marker::Sync + std::marker::Send, // TODO: Check this.
+    V: std::marker::Send,
+{
+    // type Guard<'a> = tokio::sync::MutexGuard<'a, Option<V>> where Self: 'a, V: 'a;
+    async fn lock<'a>(&'a mut self, key: &K) -> MyResult<&dyn MutexGuard<Option<V>>>
+        where V: 'a
+    {
         // Remove expired entries.
         let time_threshold = SystemTime::now() - self.keep_duration;
-        while let Some(kv) = self.put_times.first_key_value() {
+
+        let mut put_times = self.put_times.lock().await; // a short-time lock
+        while let Some(kv) = put_times.first_key_value() {
             if *kv.0 < time_threshold {
                 for kv2 in kv.1 {
                     self.data.remove(kv2);
                 }
-                self.put_times.pop_first();
+                put_times.pop_first();
             }
         }
 
-        let data = self.data.get(&Vec::from(key.0));
-        Ok(if let Some(data) = data {
-            if let Some(data) = data {
-                Some(data)
-            } else {
-                
-            }
-        })
+        let data = self.data.lock(key).await;
+        Ok(&data)
     }
-    fn put(&mut self, key: Key, value: Value) -> MyResult<()> {
-        self.data.insert(Vec::from(key.0), Vec::from(value.0));
+    async fn put(&mut self, key: K, value: V) -> MyResult<()> {
+        // We first set `self.data` and then `self.put_times`, so there will be no hanging times.
+
+        self.data.lock(&key).await.set(Some(value));
+
         let time = SystemTime::now();
-        self.put_times
+        let mut put_times = self.put_times.lock().await; // a short-time lock
+        put_times
             .entry(time)
-            .and_modify(|v| v.push(Vec::from(value.0)))
-            .or_insert_with(|| vec![Vec::from(value.0)]);
+            .and_modify(|v| v.push(key.clone()))
+            .or_insert_with(|| vec![key]);
 
         Ok(())
     }
 }
+
+pub type BinaryMemCache = MemCache<Vec<u8>, Vec<u8>>;

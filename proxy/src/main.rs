@@ -11,7 +11,7 @@ use log::info;
 use sha2::Digest;
 use actix_web::{body::BoxBody, http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
 use anyhow::{anyhow, bail};
-use cache::cache::{Cache, Key, Value};
+use cache::{cache::{BinaryCache, Cache}, mem_cache::BinaryMemCache};
 use clap::Parser;
 use errors::{InvalidHeaderNameError, InvalidHeaderValueError, MyCorruptedDBError, MyResult};
 use reqwest::ClientBuilder;
@@ -126,7 +126,7 @@ async fn serve(
     req: actix_web::HttpRequest,
     body: web::Bytes,
     config: Data<Config>,
-    cache: Data<Arc<Mutex<&mut dyn Cache>>>,
+    cache: Data<Arc<Mutex<&mut dyn Cache<Vec<u8>, Vec<u8>>>>>,
     state: Data<State>,
 )
     -> MyResult<actix_web::HttpResponse<BoxBody>>
@@ -136,8 +136,9 @@ async fn serve(
     // Lock for the entire duration of the outcall's call.
     let mut cache = cache.lock().unwrap(); // FIXME: Should use future_parking_lot awaitable Mutex.
 
-    let response = &mut if let Some(serialize_response) =
-        cache.get(Key(serialized_request.as_slice()))?
+    // We lock during the time of downloading from upstream to prevent duplicate requests with identical data.
+    let cache_lock = cache.lock(&serialized_request).await?;
+    let response = &mut if let Some(serialize_response) = &**cache_lock
     {
         // TODO: Unlock here to block less time.
         let mut response = deserialize_http_response(serialize_response)?;
@@ -165,7 +166,7 @@ async fn serve(
 
         // TODO: After which headers modifications to put this block?
         let hash = Sha256::digest(serialized_request.as_slice()); // FIXME: Hash only nonce
-        cache.put(Key(&hash), Value(serialize_http_response(reqwest_response, body.clone())?.as_slice()))?;
+        cache.put(Vec::from(&*hash), serialize_http_response(reqwest_response, body.clone())?).await?;
 
         if config.show_hit_miss {
             actix_response.headers_mut().append(
@@ -203,7 +204,7 @@ async fn proxy(
     req: actix_web::HttpRequest,
     body: web::Bytes,
     config: Data<Config>,
-    cache: Data<Arc<Mutex<&mut dyn Cache>>>,
+    cache: Data<Arc<Mutex<&mut BinaryCache>>>,
     state: Data<State>, 
 )
     -> MyResult<actix_web::HttpResponse>
