@@ -1,15 +1,20 @@
 use std::collections::{BTreeMap, HashMap};
 use std::ops::{Deref, DerefMut};
 
+use async_trait::async_trait;
 use tokio::sync::TryLockError;
 
+#[async_trait]
 pub trait MutexGuard<T>: Deref<Target = T> /*+ DerefMut<Target = T>*/ {
-    fn set(&mut self, value: T);
+    async fn set(&mut self, value: T);
     // fn remove(&self);
 }
 
-impl<T> MutexGuard<T> for tokio::sync::MutexGuard<'_, T> {
-    fn set(&mut self, value: T) {
+#[async_trait]
+impl<T> MutexGuard<T> for tokio::sync::MutexGuard<'_, T>
+    where T: std::marker::Send
+{
+    async fn set(&mut self, value: T) {
         *self.deref_mut() = value;
     }
 
@@ -28,7 +33,9 @@ pub trait Mutex<T> {
     fn try_lock(&self) -> Result<impl MutexGuard<T>, TryLockError>;
 }
 
-impl<T> Mutex<T> for tokio::sync::Mutex<T> {
+impl<T> Mutex<T> for tokio::sync::Mutex<T>
+    where T: std::marker::Send,
+{
     fn into_inner(self) -> T
         where
             T: Sized
@@ -73,6 +80,7 @@ impl<K, V> LockableHashMap<K, V> {
 impl<K, V> AbstractLockableMap<K, V> for LockableHashMap<K, V> 
 where
     K: std::hash::Hash + Eq + Clone, // TODO: Is `Clone` needed?
+    V: std::marker::Send, // TODO: It is an over-specification.
 {
     type Guard<'a> = tokio::sync::MutexGuard<'a, Option<V>> where K: 'a, V: 'a;
 
@@ -110,6 +118,7 @@ impl<K, V> LockableBTreeMap<K, V> {
 impl<K, V> AbstractLockableMap<K, V> for LockableBTreeMap<K, V> 
 where
     K: std::hash::Hash + Eq + Clone + Ord, // TODO: Is `Clone` needed?
+    V: std::marker::Send, // TODO: It is an over-specification.
 {
     type Guard<'a> = tokio::sync::MutexGuard<'a, Option<V>> where K: 'a, V: 'a;
 

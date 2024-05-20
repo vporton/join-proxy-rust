@@ -137,7 +137,7 @@ async fn serve(
     let mut cache = cache.lock().unwrap(); // FIXME: Should use future_parking_lot awaitable Mutex.
 
     // We lock during the time of downloading from upstream to prevent duplicate requests with identical data.
-    let cache_lock = cache.lock(&serialized_request).await?;
+    let mut cache_lock = cache.lock(&serialized_request).await?;
     let response = &mut if let Some(serialize_response) = &**cache_lock
     {
         // TODO: Unlock here to block less time.
@@ -166,7 +166,7 @@ async fn serve(
 
         // TODO: After which headers modifications to put this block?
         let hash = Sha256::digest(serialized_request.as_slice()); // FIXME: Hash only nonce
-        cache.put(Vec::from(&*hash), serialize_http_response(reqwest_response, body.clone())?).await?;
+        (*cache_lock).set(Some(serialize_http_response(reqwest_response, body.clone())?)).await;
 
         if config.show_hit_miss {
             actix_response.headers_mut().append(
