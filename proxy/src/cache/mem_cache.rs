@@ -31,7 +31,7 @@ where
     V: std::marker::Send,
 {
     // type Guard<'a> = tokio::sync::MutexGuard<'a, Option<V>> where Self: 'a, V: 'a;
-    async fn lock<'a>(&'a mut self, key: &K) -> MyResult<&dyn MutexGuard<Option<V>>>
+    async fn lock<'a>(&'a mut self, key: &K) -> MyResult<Box<dyn MutexGuard<Option<V>> + 'a>>
         where V: 'a
     {
         // Remove expired entries.
@@ -48,7 +48,7 @@ where
         }
 
         let data = self.data.lock(key).await;
-        Ok(&data)
+        Ok(Box::new(data))
     }
     async fn put(&mut self, key: K, value: V) -> MyResult<()> {
         // We first set `self.data` and then `self.put_times`, so there will be no hanging times.
