@@ -9,7 +9,7 @@ use tokio::sync::Mutex;
 use crate::{cache::cache::Cache, errors::MyResult};
 
 pub struct MemCache<K, V> {
-    data: LockableHashMap<K, V>,
+    data: LockableHashMap<K, V>, // TODO: Use `dashmap` crate instead?
     put_times: Mutex<BTreeMap<SystemTime, Vec<K>>>,
     keep_duration: Duration,
 }
