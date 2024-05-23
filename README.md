@@ -32,7 +32,7 @@ or is specified by `-c config.json` flag:
 {
     "port": 8080,
     "our_secret": "re0agaejei0to2coothiv3Shu5anai0ree3aipuo", // simple Bearer authentication
-    "upstream_prefix": "https://api.openai.com", // if specified, TODO
+    "upstream_prefix": "https://api.openai.com", // if specified, Host: header is ignored
     "cache_timeout": 3000, // how long to keep upstream responses in the cache
     "remove_request_headers": ["X-Not"], // remove these headers from requests to upstream
     "add_request_headers": [["Authorization", "Bearer <OPENAI_API_KEY>"]], // add for example an API key

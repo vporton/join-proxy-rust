@@ -153,7 +153,7 @@ async fn proxy(
     // We lock during the time of downloading from upstream to prevent duplicate requests with identical data.
     let mut cache_lock = cache.lock(&Vec::from(actix_request_hash.as_slice())).await?;
 
-    let response = &mut if let Some(serialized_response) = (**cache_lock).clone() // TODO: Get rid of `clone`.
+    let response = &mut if let Some(serialized_response) = (*cache_lock).inner().await
     {
         std::mem::drop(cache_lock);
 
@@ -247,8 +247,6 @@ async fn main() -> anyhow::Result<()> {
             .map(|h| http_for_actix::HeaderName::from_str(h).map_err(|_| InvalidHeaderNameError::default().into()));
     let response_headers_to_remove = response_headers_to_remove.collect::<MyResult<Vec<_>>>()?;
     let response_headers_to_remove = Arc::new(response_headers_to_remove);
-
-    // TODO: Download verifying key in parallel with serving.
 
     let agent = {
         if config.callback.is_some() {
