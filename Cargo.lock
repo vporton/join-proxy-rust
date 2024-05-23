@@ -1396,20 +1396,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ic-cdk-macros"
-version = "0.13.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b2a7d0338dbd29d63df3445402dc9cd792d2f65ceccf36d4f9a88529ca2b62d"
-dependencies = [
- "candid",
- "proc-macro2",
- "quote",
- "serde",
- "serde_tokenstream",
- "syn 2.0.63",
-]
-
-[[package]]
 name = "ic-certification"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1536,8 +1522,8 @@ dependencies = [
  "http 0.2.12",
  "http 1.1.0",
  "ic-agent",
+ "lock_api 0.4.12",
  "log",
- "managed-proxy-lib",
  "reqwest",
  "serde",
  "serde_derive",
@@ -1641,19 +1627,6 @@ name = "log"
 version = "0.4.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90ed8c1e510134f979dbc4f070f87d4313098b704861a105fe34231c70a3901c"
-
-[[package]]
-name = "managed-proxy-lib"
-version = "0.0.1"
-dependencies = [
- "anyhow",
- "candid",
- "ic-agent",
- "ic-cdk-macros",
- "k256",
- "serde",
- "serde_derive",
-]
 
 [[package]]
 name = "maybe-uninit"
@@ -2422,18 +2395,6 @@ checksum = "6c64451ba24fc7a6a2d60fc75dd9c83c90903b19028d4eff35e88fc1e86564e9"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.63",
-]
-
-[[package]]
-name = "serde_tokenstream"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a00ffd23fd882d096f09fcaae2a9de8329a328628e86027e049ee051dc1621f"
-dependencies = [
- "proc-macro2",
- "quote",
- "serde",
  "syn 2.0.63",
 ]
 

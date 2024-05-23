@@ -146,7 +146,6 @@ where
 //     // }
 
 //     // TODO: Move the functionality to `MutexGuard`?
-//     // FIXME: nona-atomic operation
 //     // async fn remove(&mut self, key: &K) {
 //     //     let mut lock = self.lock(key).await;
 //     //     lock.set(None);

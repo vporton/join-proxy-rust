@@ -2,7 +2,7 @@ mod errors;
 mod cache;
 mod config;
 
-use std::{fs::File, str::{from_utf8, FromStr}, sync::{Arc, Mutex}};
+use std::{fs::File, str::{from_utf8, FromStr}, sync::Arc};
 
 use actix_web::{http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
 use anyhow::anyhow;
@@ -13,6 +13,7 @@ use reqwest::ClientBuilder;
 use ic_agent::Agent;
 use candid::{Decode, Encode};
 use sha2::{Digest, Sha256};
+use tokio::sync::Mutex;
 
 use crate::config::Config;
 
@@ -119,7 +120,7 @@ async fn proxy(
     req: actix_web::HttpRequest,
     body: web::Bytes,
     config: Data<Config>,
-    cache: Data<Arc<Mutex<&mut BinaryCache>>>,
+    cache: Data<Arc<tokio::sync::Mutex<&mut BinaryCache>>>,
     state: Data<State>, 
 )
     -> MyResult<actix_web::HttpResponse>
@@ -147,7 +148,7 @@ async fn proxy(
         }
     }    
 
-    let mut cache = cache.lock().unwrap(); // FIXME: Should use future_parking_lot awaitable Mutex.
+    let mut cache = (***cache).lock().await;
 
     // We lock during the time of downloading from upstream to prevent duplicate requests with identical data.
     let mut cache_lock = cache.lock(&Vec::from(actix_request_hash.as_slice())).await?;
