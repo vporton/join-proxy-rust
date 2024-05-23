@@ -45,7 +45,7 @@ fn serialize_http_request(request: &actix_web::HttpRequest, bytes: &actix_web::w
     Ok([header_part.as_bytes(), b"\n", bytes.to_vec().as_slice()].concat())
 }
 
-fn serialize_http_response(response: reqwest::Response, bytes: bytes::Bytes) -> anyhow::Result<Vec<u8>> {
+fn serialize_http_response(response: &reqwest::Response, bytes: bytes::Bytes) -> anyhow::Result<Vec<u8>> {
     let headers_list = response.headers().into_iter()
         .map(|(k, v)| -> anyhow::Result<String> {
             Ok(k.to_string() + "\t" + v.to_str()?)
@@ -135,11 +135,11 @@ async fn proxy(
     }
 
     let serialized_request = serialize_http_request(&req, &body)?;
-    let hash = Sha256::digest(serialized_request.as_slice());
+    let actix_request_hash = Sha256::digest(serialized_request.as_slice());
 
     if let (Some(agent), Some(callback)) = (&state.agent, &config.callback) {
         let req_id = agent.update(&callback.canister, &callback.func)
-            .with_arg(Encode!(&hash.as_slice())?).call().await?;
+            .with_arg(Encode!(&actix_request_hash.as_slice())?).call().await?;
         let res = agent.wait(req_id, callback.canister).await?;
         let status: bool = Decode!(res.as_slice(), bool)?;
         if !status {
@@ -147,16 +147,16 @@ async fn proxy(
         }
     }    
 
-    // Lock for the entire duration of the outcall's call.
     let mut cache = cache.lock().unwrap(); // FIXME: Should use future_parking_lot awaitable Mutex.
 
     // We lock during the time of downloading from upstream to prevent duplicate requests with identical data.
-    let mut cache_lock = cache.lock(&Vec::from(hash.as_slice())).await?;
+    let mut cache_lock = cache.lock(&Vec::from(actix_request_hash.as_slice())).await?;
 
-    let response = &mut if let Some(serialize_response) = &**cache_lock
+    let response = &mut if let Some(serialized_response) = (**cache_lock).clone() // TODO: Get rid of `clone`.
     {
-        // TODO: Unlock here to block less time.
-        let mut response = deserialize_http_response(serialize_response)?;
+        std::mem::drop(cache_lock);
+
+        let mut response = deserialize_http_response(serialized_response.as_slice())?;
         if config.show_hit_miss {
             response.headers_mut().append(
                 http_for_actix::HeaderName::from_str("X-JoinProxy-Response").unwrap(),
@@ -168,6 +168,10 @@ async fn proxy(
         let reqwest = prepare_request(&req, &body, &config, &state).await?;
         let reqwest_response = state.client.execute(reqwest).await?;
 
+        // We retrieved the response, immediately set and release the cache:
+        (*cache_lock).set(Some(serialize_http_response(&reqwest_response, body.clone())?)).await;
+        std::mem::drop(cache_lock);
+
         let mut actix_response = actix_web::HttpResponse::with_body(
             StatusCode::from_u16(reqwest_response.status().as_u16())?, Vec::from(body.as_ref()));
 
@@ -178,9 +182,6 @@ async fn proxy(
                 http_for_actix::HeaderValue::from_str(v.to_str()?).map_err(|_| InvalidHeaderValueError::default())?,
             );
         }
-
-        // TODO: After which headers modifications to put this block?
-        cache_lock.set(Some(serialize_http_response(reqwest_response, body.clone())?)).await;
 
         if config.show_hit_miss {
             actix_response.headers_mut().append(
