@@ -73,13 +73,7 @@ impl From<anyhow::Error> for MyError {
 
 impl ResponseError for MyError {
     fn status_code(&self) -> StatusCode {
-        // if self.err.downcast_ref::<AuthenticationFailedError>().is_some() {
-        //     StatusCode::UNAUTHORIZED
-        // } else if self.err.downcast_ref::<KYCError>().is_some() {
-        //     StatusCode::UNAUTHORIZED
-        // } else {
-        StatusCode::INTERNAL_SERVER_ERROR // TODO
-        // }
+        StatusCode::BAD_REQUEST
     }
     fn error_response(&self) -> HttpResponse {
         HttpResponse::build(self.status_code())
