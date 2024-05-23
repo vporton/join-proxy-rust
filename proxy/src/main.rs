@@ -139,7 +139,7 @@ async fn proxy(
     }
 
     let serialized_request = serialize_http_request(&req, &body)?;
-    let hash = Sha256::digest(serialized_request.as_slice()); // FIXME: Hash only nonce
+    let hash = Sha256::digest(serialized_request.as_slice());
 
     if let (Some(agent), Some(callback)) = (&state.agent, &config.callback) {
         let req_id = agent.update(&callback.canister, &callback.func)
