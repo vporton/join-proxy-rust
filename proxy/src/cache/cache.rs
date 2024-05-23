@@ -13,4 +13,5 @@ pub trait Cache<K, V> {
     // async fn put(&mut self, key: K, value: V) -> MyResult<()>;
 }
 
+// TODO: Avoid copying vectors.
 pub type BinaryCache = dyn Cache<Vec<u8>, Vec<u8>>;
