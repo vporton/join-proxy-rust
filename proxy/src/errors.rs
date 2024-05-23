@@ -38,27 +38,6 @@ pub enum MyError {
     Agent(AgentError),
 }
 
-// impl Display for MyError {
-//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-//         match self {
-//             Self::Anyhow(e) => Debug::fmt(&*e, f),
-//             Self::Io(e) => Debug::fmt(&*e, f),
-//             Self::InvalidMethod(e) => Debug::fmt(&*e, f),
-//             Self::HttpResponse(e) => Debug::fmt(&*e, f),
-//             Self::ReqwestError(e) => Debug::fmt(&*e, f),
-//             Self::InvalidStatus(e) => Debug::fmt(&*e, f),
-//             Self::HeaderToStrForActix(e) => Debug::fmt(&*e, f),
-//             Self::HeaderToStr(e) => Debug::fmt(&*e, f),
-//             // Self::InvalidHeaderName(e) => Debug::fmt(&*e, f),
-//             Self::MyCorruptedDB(e) => Debug::fmt(&*e, f),
-//             Self::InvalidHeaderName(e) => Debug::fmt(&*e, f),
-//             Self::InvalidHeaderValue(e) => Debug::fmt(&*e, f),
-//             Self::Base64Decode(e) => Debug::fmt(&*e, f),
-//             Self::Ecdsa(e) => Debug::fmt(&*e, f),
-//         }
-//     }
-// }
-
 #[derive(Debug, Default, Error)]
 pub struct MyCorruptedDBError {}
 
