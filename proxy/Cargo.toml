@@ -12,7 +12,6 @@ clap = { version = "4.5.4", features = ["derive"] }
 derive_more = "0.99.17"
 http = "1.1.0"
 http_for_actix = { version = "0.2.11", package = "http" }
-k256 = "0.13.3"
 log = "0.4.21"
 reqwest = { version = "0.12.4", features = ["default-tls", "http2", "macos-system-configuration"] }
 serde = "1.0.201"
@@ -23,7 +22,7 @@ thiserror = "1.0.60"
 lib = { path = "../lib", package = "managed-proxy-lib"}
 ic-agent = "0.35.0"
 base64 = "0.22.1"
-lock_api = "0.4.12"
-future-parking_lot = "0.3.3"
+future-parking_lot = "0.3.3"  # TODO: Can remove?
 tokio = "1.37.0"
 async-trait = "0.1.80"
+candid = "0.10.8"

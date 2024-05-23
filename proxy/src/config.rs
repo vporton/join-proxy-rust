@@ -5,6 +5,13 @@ use serde::de::Error;
 use std::time::Duration;
 
 #[derive(Clone, Deserialize, Debug)]
+pub struct Callback {
+    #[serde(deserialize_with = "deserialize_canister_id")]
+    pub canister: Principal,
+    pub func: String,
+}
+
+#[derive(Clone, Deserialize, Debug)]
 pub struct Config {
     #[serde(default="default_port")]
     pub port: u16,
@@ -26,8 +33,7 @@ pub struct Config {
     pub ic_url: Option<String>,
     #[serde(default="default_ic_local")]
     pub ic_local: bool,
-    #[serde(deserialize_with = "deserialize_canister_id")]
-    pub signing_canister_id: Option<Principal>,
+    pub callback: Option<Callback>,
 }
 
 fn default_port() -> u16 {
@@ -54,18 +60,14 @@ fn default_ic_local() -> bool {
     false
 }
 
-fn deserialize_canister_id<'de, D>(deserializer: D) -> Result<Option<Principal>, D::Error>
+fn deserialize_canister_id<'de, D>(deserializer: D) -> Result<Principal, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let input: Option<String> = serde::Deserialize::deserialize(deserializer)?;
-    if let Some(input) = input {
-        match Principal::from_text(input) {
-            Ok(principal) => Ok(Some(principal)),
-            Err(principal_error) =>
-                Err(D::Error::custom(format!("Invalid principal: {}", principal_error))),
-        }
-    } else {
-        Ok(None)
+    let input: String = serde::Deserialize::deserialize(deserializer)?;
+    match Principal::from_text(input) {
+        Ok(principal) => Ok(principal),
+        Err(principal_error) =>
+            Err(D::Error::custom(format!("Invalid principal: {}", principal_error))),
     }
 }

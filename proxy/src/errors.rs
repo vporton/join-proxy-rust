@@ -1,6 +1,6 @@
 use actix_web::{http::{header::ContentType, StatusCode}, HttpResponse, ResponseError};
 use http_for_actix::status::InvalidStatusCode;
-use k256::ecdsa;
+use ic_agent::AgentError;
 use thiserror::Error;
 use std::fmt::{Debug, Display, Formatter};
 use derive_more::From;
@@ -32,8 +32,10 @@ pub enum MyError {
     InvalidHeaderValue(InvalidHeaderValueError),
     #[error("Invalid Base64 encoded data")]
     Base64Decode(base64::DecodeError),
-    #[error("ECDSA error: {0}")]
-    Ecdsa(ecdsa::Error),
+    #[error("Candid error: {0}")]
+    Candid(candid::Error),
+    #[error("IC agent error: {0}")]
+    Agent(AgentError),
 }
 
 // impl Display for MyError {

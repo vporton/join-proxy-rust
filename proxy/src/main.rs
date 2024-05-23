@@ -8,16 +8,15 @@ use actix::clock::sleep;
 use base64::{engine::general_purpose::STANDARD_NO_PAD, Engine};
 use lib::{get_canister_pubkey, verify_signature, CanisterPublicKeyPollResult, CanisterPublicKeyStatus};
 use log::info;
-use sha2::Digest;
 use actix_web::{body::BoxBody, http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
 use anyhow::{anyhow, bail};
 use cache::{cache::BinaryCache, mem_cache::BinaryMemCache};
 use clap::Parser;
 use errors::{InvalidHeaderNameError, InvalidHeaderValueError, MyCorruptedDBError, MyResult};
 use reqwest::ClientBuilder;
-use sha2::Sha256;
-use k256::ecdsa::{Signature, VerifyingKey};
 use ic_agent::Agent;
+use candid::{Decode, Encode};
+use sha2::{Digest, Sha256};
 
 use crate::config::Config;
 
@@ -30,7 +29,7 @@ struct Args {
 
 struct State {
     client: reqwest::Client,
-    verifying_key: Option<VerifyingKey>,
+    agent: Option<Agent>,
     additional_response_headers: Arc<Vec<(http_for_actix::HeaderName, http_for_actix::HeaderValue)>>,
     response_headers_to_remove: Arc<Vec<http_for_actix::HeaderName>>,
 }
@@ -120,23 +119,44 @@ async fn prepare_request(req: &actix_web::HttpRequest, body: &web::Bytes, config
     Ok(builder.build()?)
 }
 
-// TODO: Use `&[u8]` instead of `BoxBody`.
-async fn serve(
+async fn proxy(
     req: actix_web::HttpRequest,
     body: web::Bytes,
     config: Data<Config>,
     cache: Data<Arc<Mutex<&mut BinaryCache>>>,
-    state: Data<State>,
+    state: Data<State>, 
 )
-    -> MyResult<actix_web::HttpResponse<BoxBody>>
+    -> MyResult<actix_web::HttpResponse>
 {
+    if let Some(our_secret) = &config.our_secret {
+        let passed_key = req.headers()
+            .get("x-joinproxy-key")
+            .map(|v| v.to_str().map_err(|_| anyhow!("Cannot read header X-JoinProxy-Key")))
+            .transpose()?;
+        if passed_key != Some(&("Bearer ".to_string() + &our_secret)) {
+            return Ok(HttpResponse::new(StatusCode::NETWORK_AUTHENTICATION_REQUIRED));
+        }
+    }
+
     let serialized_request = serialize_http_request(&req, &body)?;
+    let hash = Sha256::digest(serialized_request.as_slice()); // FIXME: Hash only nonce
+
+    if let (Some(agent), Some(callback)) = (&state.agent, &config.callback) {
+        let req_id = agent.update(&callback.canister, &callback.func)
+            .with_arg(Encode!(&hash.as_slice())?).call().await?;
+        let res = agent.wait(req_id, callback.canister).await?;
+        let status: bool = Decode!(res.as_slice(), bool)?;
+        if !status {
+            return Ok(HttpResponse::new(StatusCode::NETWORK_AUTHENTICATION_REQUIRED));
+        }
+    }    
 
     // Lock for the entire duration of the outcall's call.
     let mut cache = cache.lock().unwrap(); // FIXME: Should use future_parking_lot awaitable Mutex.
 
     // We lock during the time of downloading from upstream to prevent duplicate requests with identical data.
-    let mut cache_lock = cache.lock(&serialized_request).await?;
+    let mut cache_lock = cache.lock(&Vec::from(hash.as_slice())).await?;
+
     let response = &mut if let Some(serialize_response) = &**cache_lock
     {
         // TODO: Unlock here to block less time.
@@ -164,7 +184,6 @@ async fn serve(
         }
 
         // TODO: After which headers modifications to put this block?
-        let hash = Sha256::digest(serialized_request.as_slice()); // FIXME: Hash only nonce
         (*cache_lock).set(Some(serialize_http_response(reqwest_response, body.clone())?)).await;
 
         if config.show_hit_miss {
@@ -197,52 +216,6 @@ async fn serve(
 
     Ok(actix_web::HttpResponse::build(StatusCode::from_u16(response.status().as_u16())?)
         .body(Vec::from(body.as_ref())))
-}
-
-async fn proxy(
-    req: actix_web::HttpRequest,
-    body: web::Bytes,
-    config: Data<Config>,
-    cache: Data<Arc<Mutex<&mut BinaryCache>>>,
-    state: Data<State>, 
-)
-    -> MyResult<actix_web::HttpResponse>
-{
-    if let Some(our_secret) = &config.our_secret {
-        let passed_key = req.headers()
-            .get("x-joinproxy-key")
-            .map(|v| v.to_str().map_err(|_| anyhow!("Cannot read header X-JoinProxy-Key")))
-            .transpose()?;
-        if passed_key != Some(&("Bearer ".to_string() + &our_secret)) {
-            return Ok(HttpResponse::new(StatusCode::NETWORK_AUTHENTICATION_REQUIRED));
-        }
-    }
-    if let Some(verifying_key) = &state.verifying_key {
-        if let (Some(nonce_header), Some(signature_as_base64)) =
-            (req.headers().get("nonce"), req.headers().get("signature"))
-        {
-            let mut nonce_iter = nonce_header.as_bytes().split(|&c| c == b':');
-            // let long_time_nonce_as_base64 = nonce_iter.next().ok_or_else(|| anyhow!("Wrong nonce."))?;
-            let short_time_nonce_as_base64 = nonce_iter.next().ok_or_else(|| anyhow!("Wrong nonce."))?;
-            if nonce_iter.next().is_some() {
-                return Err(anyhow!("Wrong nonce").into());
-            }
-            let signature = STANDARD_NO_PAD.decode(signature_as_base64)?;
-            // let long_time_nonce = STANDARD_NO_PAD.decode(long_time_nonce_as_base64)?;
-            let short_time_nonce = STANDARD_NO_PAD.decode(short_time_nonce_as_base64)?;
-            // FIXME: Verify no repeated short_time_nonce.
-            let hash = Sha256::digest(nonce_header.as_bytes());
-            if verify_signature(Signature::from_bytes(
-                signature.as_slice().into())?, &hash.into() as &[u8; 32], *verifying_key
-            ).is_err() {
-                return Ok(HttpResponse::new(StatusCode::NETWORK_AUTHENTICATION_REQUIRED));
-            }
-        } else {
-            return Ok(HttpResponse::new(StatusCode::NETWORK_AUTHENTICATION_REQUIRED));
-        }
-    }
-
-    serve(req, body, config, cache, state).await
 }
 
 #[actix_web::main]
@@ -280,38 +253,20 @@ async fn main() -> anyhow::Result<()> {
     // TODO: Download verifying key in parallel with serving.
 
     let agent = {
-        let mut builder = Agent::builder();
-        if let Some(ic_url) = &config.ic_url {
-            builder = builder.with_url(ic_url);
-        }
-        builder.build()?
-    };
-    if config.ic_local {
-        agent.fetch_root_key().await?;
-    }
-
-    let verifying_key =
-        if let Some(signing_canister_id) = config.signing_canister_id {
-            'b: {
-                let verifying_key_status = get_canister_pubkey(&agent, signing_canister_id).await?;
-                for i in 0..20 { // TODO: Make configurable.
-                    info!("Downloading the key, attempt {}", i+1);
-                    match CanisterPublicKeyStatus::poll(&agent, &verifying_key_status).await {
-                        Ok(CanisterPublicKeyPollResult::Submitted) => {}
-                        Ok(CanisterPublicKeyPollResult::Completed(key)) => {
-                            break 'b Some(key);
-                        }
-                        Ok(CanisterPublicKeyPollResult::Accepted) => bail!("Canister key disappeared."),
-                        Err(err) => bail!("Failed to load canister key: {err}"),
-                    }
-                    sleep(Duration::from_millis(500)).await; // TODO: Make configurable.
-                }
-
-                bail!("Cannot load canister public key!");
+        if config.callback.is_some() {
+            let mut builder = Agent::builder();
+            if let Some(ic_url) = &config.ic_url {
+                builder = builder.with_url(ic_url);
             }
+            let agent = builder.build()?;
+            if config.ic_local {
+                agent.fetch_root_key().await?;
+            }
+            Some(agent)
         } else {
             None
-        };
+        }
+    };
 
     HttpServer::new(move || {
         let state = State {
@@ -321,7 +276,7 @@ async fn main() -> anyhow::Result<()> {
                 .build().unwrap(),
             additional_response_headers: additional_response_headers.clone(),
             response_headers_to_remove: response_headers_to_remove.clone(),
-            verifying_key,
+            agent: agent.clone(),
         };
         App::new().service(
             web::scope("")
