@@ -180,7 +180,7 @@ async fn proxy(
         }
 
         // TODO: After which headers modifications to put this block?
-        (*cache_lock).set(Some(serialize_http_response(reqwest_response, body.clone())?)).await;
+        cache_lock.set(Some(serialize_http_response(reqwest_response, body.clone())?)).await;
 
         if config.show_hit_miss {
             actix_response.headers_mut().append(
