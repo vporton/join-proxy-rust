@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 
 use async_trait::async_trait;
-use tokio::sync::TryLockError;
 
 #[async_trait]
 pub trait MutexGuard<T>: Deref<Target = T> /*+ DerefMut<Target = T>*/ {
@@ -24,33 +23,33 @@ impl<T> MutexGuard<T> for tokio::sync::MutexGuard<'_, T>
 }
 
 // TODO: more abstract error handling
-pub trait Mutex<T> {
-    // fn get_mut(&mut self) -> LockResult<&mut T>; // not available for Redis
-    fn into_inner(self) -> T
-        where
-            T: Sized;
-    async fn lock(&self) -> impl MutexGuard<T>;
-    fn try_lock(&self) -> Result<impl MutexGuard<T>, TryLockError>;
-}
+// pub trait Mutex<T> {
+//     // fn get_mut(&mut self) -> LockResult<&mut T>; // not available for Redis
+//     // fn into_inner(self) -> T
+//     //     where
+//     //         T: Sized;
+//     // async fn lock(&self) -> impl MutexGuard<T>;
+//     // fn try_lock(&self) -> Result<impl MutexGuard<T>, TryLockError>;
+// }
 
-impl<T> Mutex<T> for tokio::sync::Mutex<T>
-    where T: std::marker::Send,
-{
-    fn into_inner(self) -> T
-        where
-            T: Sized
-    {
-        self.into_inner()
-    }
+// impl<T> Mutex<T> for tokio::sync::Mutex<T>
+//     where T: std::marker::Send,
+// {
+//     fn into_inner(self) -> T
+//         where
+//             T: Sized
+//     {
+//         self.into_inner()
+//     }
 
-    async fn lock(&self) -> impl MutexGuard<T> {
-        self.lock().await
-    }
+//     async fn lock(&self) -> impl MutexGuard<T> {
+//         self.lock().await
+//     }
 
-    fn try_lock(&self) -> Result<impl MutexGuard<T>, TryLockError> {
-        self.try_lock()
-    }
-}
+//     fn try_lock(&self) -> Result<impl MutexGuard<T>, TryLockError> {
+//         self.try_lock()
+//     }
+// }
 
 pub trait AbstractLockableMap<K, V> {
     type Guard<'a>: MutexGuard<Option<V>> where Self: 'a;

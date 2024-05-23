@@ -2,14 +2,10 @@ mod errors;
 mod cache;
 mod config;
 
-use std::{fs::File, str::{from_utf8, FromStr}, sync::{Arc, Mutex}, time::Duration};
+use std::{fs::File, str::{from_utf8, FromStr}, sync::{Arc, Mutex}};
 
-use actix::clock::sleep;
-use base64::{engine::general_purpose::STANDARD_NO_PAD, Engine};
-use lib::{get_canister_pubkey, verify_signature, CanisterPublicKeyPollResult, CanisterPublicKeyStatus};
-use log::info;
-use actix_web::{body::BoxBody, http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
-use anyhow::{anyhow, bail};
+use actix_web::{http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
+use anyhow::anyhow;
 use cache::{cache::BinaryCache, mem_cache::BinaryMemCache};
 use clap::Parser;
 use errors::{InvalidHeaderNameError, InvalidHeaderValueError, MyCorruptedDBError, MyResult};
