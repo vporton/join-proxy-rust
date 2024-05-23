@@ -31,7 +31,6 @@ where
     K: Clone + Hash + std::cmp::Eq + std::marker::Sync + std::marker::Send,
     V: std::marker::Send,
 {
-    // type Guard<'a> = tokio::sync::MutexGuard<'a, Option<V>> where Self: 'a, V: 'a;
     async fn lock<'a>(&'a mut self, key: &K) -> MyResult<Box<dyn MutexGuard<Option<V>> + 'a>>
         where V: 'a
     {
