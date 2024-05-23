@@ -84,7 +84,7 @@ async fn prepare_request(req: &actix_web::HttpRequest, body: &web::Bytes, config
     let url_prefix = if let Some(upstream_prefix) = &config.upstream_prefix {
         upstream_prefix.clone()
     } else {
-        let host = req.headers().get("x-host") // TODO: Document X-Host.
+        let host = req.headers().get("host")
             .ok_or_else(|| anyhow!("Missing both upstream_prefix in config and Host: header"))?
             .to_str()?;
         "https://".to_string() + host
