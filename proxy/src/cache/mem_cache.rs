@@ -50,20 +50,6 @@ where
         let data = self.data.lock(key).await;
         Ok(Box::new(data))
     }
-    // async fn put(&mut self, key: K, value: V) -> MyResult<()> {
-    //     // We first set `self.data` and then `self.put_times`, so there will be no hanging times.
-
-    //     self.data.lock(&key).await.set(Some(value));
-
-    //     let time = SystemTime::now();
-    //     let mut put_times = self.put_times.lock().await; // a short-time lock
-    //     put_times
-    //         .entry(time)
-    //         .and_modify(|v| v.push(key.clone()))
-    //         .or_insert_with(|| vec![key]);
-
-    //     Ok(())
-    // }
 }
 
 pub type BinaryMemCache = MemCache<Vec<u8>, Vec<u8>>;
