@@ -1,0 +1,18 @@
+[package]
+name = "joinproxy_lib"
+version = "1.0.0"
+description = "Utilities to use IC together with Joining Proxy"
+repository = "https://github.com/vporton/joining-proxy-rust"
+keywords = [
+  "proxy",
+  "HTTP",
+  "outcalls",
+  "IC",
+  "ICP",
+  "Internet",
+  "Computer"
+]
+license = "MIT"
+
+[dependencies]
+itertools = "0.2.1"
