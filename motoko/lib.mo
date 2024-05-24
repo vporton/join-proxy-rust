@@ -49,11 +49,17 @@ module {
     type HttpRequestsChecker = {
         hashes: BTree.BTree<Blob, Int>; // hash -> time
         times: BTree.BTree<Int, BTree.BTree<Blob, ()>>;
-        var timeout: Int;
     };
 
-    private func deleteOldHttpRequests(checker: HttpRequestsChecker) {
-        let threshold = Time.now() - checker.timeout;
+    public func newHttpRequestsChecker(): HttpRequestsChecker {
+        {
+            hashes = BTree.init(null);
+            times = BTree.init(null);
+        }
+    };
+
+    private func deleteOldHttpRequests(checker: HttpRequestsChecker, params: {timeout: Nat}) {
+        let threshold = Time.now() - params.timeout;
         label r loop {
             let ?(minTime, hashes) = BTree.min(checker.times) else {
                 break r;
@@ -68,8 +74,8 @@ module {
         };
     };
 
-    public func announceHttpRequestHash(checker: HttpRequestsChecker, hash: Blob) {
-        deleteOldHttpRequests(checker);
+    public func announceHttpRequestHash(checker: HttpRequestsChecker, hash: Blob, params: {timeout: Nat}) {
+        deleteOldHttpRequests(checker, params);
         let now = Time.now();
         ignore BTree.insert<Blob, Int>(checker.hashes, Blob.compare, hash, now);
 
@@ -103,11 +109,16 @@ module {
         };
     };
 
-    public func announceHttpRequest(checker: HttpRequestsChecker, request: Types.HttpRequestArgs) {
-        announceHttpRequestHash(checker, hashOfHttpRequest(request));
+    public func announceHttpRequest(checker: HttpRequestsChecker, request: Types.HttpRequestArgs, params: {timeout: Nat}) {
+        announceHttpRequestHash(checker, hashOfHttpRequest(request), params);
     };
 
     public func checkHttpRequest(checker: HttpRequestsChecker, hash: Blob): Bool {
         BTree.has(checker.hashes, Blob.compare, hash);
+    };
+
+    public func checkedHttpRequest(checker: HttpRequestsChecker, request: Types.HttpRequestArgs, params: {timeout: Nat}): async* Types.HttpResponsePayload {
+        announceHttpRequest(checker, request, params);
+        await Types.ic.http_request(request);
     };
 };

@@ -68,4 +68,5 @@ module Types {
         http_request : HttpRequestArgs -> async HttpResponsePayload;
     };
 
+    public let ic : Types.IC = actor("aaaaa-aa");
 }
