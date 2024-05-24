@@ -125,6 +125,7 @@ async fn proxy(
 )
     -> MyResult<actix_web::HttpResponse>
 {
+    // First level of defence: X-JoinProxy-Key can be stolen by an IC replica owner:
     if let Some(our_secret) = &config.our_secret {
         let passed_key = req.headers()
             .get("x-joinproxy-key")
@@ -138,6 +139,7 @@ async fn proxy(
     let serialized_request = serialize_http_request(&req, &body)?;
     let actix_request_hash = Sha256::digest(serialized_request.as_slice());
 
+    // Second level of defence: Ask back the calling canister:
     if let (Some(agent), Some(callback)) = (&state.agent, &config.callback) {
         let req_id = agent.update(&callback.canister, &callback.func)
             .with_arg(Encode!(&actix_request_hash.as_slice())?).call().await?;
