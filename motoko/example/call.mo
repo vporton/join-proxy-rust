@@ -18,10 +18,10 @@ actor HttpCaller {
         }
     };
 
-   system func inspect({
-    //    caller : Principal;
-    //    arg : Blob;
-       msg : {#callHttp : () -> Types.HttpRequestArgs; #checkRequest : () -> Blob}
+    system func inspect({
+        // caller : Principal;
+        // arg : Blob;
+        msg : {#callHttp : () -> Types.HttpRequestArgs; #checkRequest : () -> Blob}
     }) : Bool {
         switch (msg) {
             case (#checkRequest hash) {
