@@ -144,10 +144,7 @@ async fn proxy(
         let req_id = agent.update(&callback.canister, &callback.func)
             .with_arg(Encode!(&actix_request_hash.as_slice())?).call().await?;
         let res = agent.wait(req_id, callback.canister).await?;
-        let status: bool = Decode!(res.as_slice(), bool)?;
-        if !status {
-            return Ok(HttpResponse::new(StatusCode::NETWORK_AUTHENTICATION_REQUIRED));
-        }
+        let _ = Decode!(res.as_slice(), ())?; // check for errors
     }    
 
     let mut cache = (***cache).lock().await;
