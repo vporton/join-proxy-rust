@@ -1,9 +1,9 @@
 import Types "HttpTypes";
-import Iter "mo:base/Iter";
 import Itertools "mo:itertools/Iter";
+import Sha256 "mo:sha2/Sha256";
 
 module {
-    public func serializeHttpRequest(request: Types.HttpRequestArgs) {
+    public func serializeHttpRequest(request: Types.HttpRequestArgs): Blob {
         let method = switch(request.method) {
             case(#get) { "GET" };
             case(#post) { "POST" };
@@ -20,5 +20,11 @@ module {
             case null { "" };
         };
         Text.encodeUtf8(header_part) # "\n" # body;
-    }
+    };
+
+    public func hashOfHttpRequest(request: Types.HttpRequestArgs): Blob {
+        // TODO: space inefficient
+        let blob = serializeHttpRequest(request);
+        Sha256.fromBlob(#sha256, blob);
+    };
 };
