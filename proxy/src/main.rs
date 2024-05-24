@@ -33,6 +33,7 @@ struct State {
 
 // Two similar functions with different data types follow:
 
+// FIXME: method
 fn serialize_http_request(request: &actix_web::HttpRequest, bytes: &actix_web::web::Bytes) -> anyhow::Result<Vec<u8>> {
     let headers_list = request.headers().into_iter()
         .map(|(k, v)| -> anyhow::Result<String> {
