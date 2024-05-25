@@ -824,6 +824,7 @@ name = "e2e"
 version = "0.1.0"
 dependencies = [
  "like-shell",
+ "tempdir",
 ]
 
 [[package]]
@@ -1548,17 +1549,18 @@ checksum = "884e2677b40cc8c339eaefcb701c32ef1fd2493d71118dc0ca4b6a736c93bd67"
 
 [[package]]
 name = "libc"
-version = "0.2.154"
+version = "0.2.155"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae743338b92ff9146ce83992f766a31066a91a8c84a45e0e9f21e7cf6de6d346"
+checksum = "97b3888a4aecf77e811145cadf6eef5901f4782c53886191b2f693f24761847c"
 
 [[package]]
 name = "like-shell"
-version = "0.1.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a03af7db5cda578d452c404520a76a872d37cda58afd2c902e7ab698d790c4a4"
+checksum = "9d1b39b86aa7bdd4b8a955f61d3caad8bb2745e8464272dd74a3a255ad90787f"
 dependencies = [
  "fs_extra",
+ "libc",
  "tempdir",
 ]
 
