@@ -4,5 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+ic-agent = "0.35.0"
 like-shell = "0.2.3"
 tempdir = "0.3.7"
+tokio = { version = "1.37.0", features = ["macros"] }
