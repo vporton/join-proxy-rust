@@ -1,5 +1,13 @@
 {
   "canisters": {
+    "call": {
+      "type": "motoko",
+      "main": "motoko/call.mo"
+    },
+    "test": {
+      "type": "motoko",
+      "main": "motoko/test.mo"
+    }
   },
   "defaults": {
     "build": {
