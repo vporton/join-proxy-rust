@@ -329,9 +329,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.83"
+version = "1.0.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25bdb32cbbdce2b519a9cd7df3a678443100e265d5e25ca763b7572a5104f5f3"
+checksum = "b3d1d046238990b9cf5bcde22a3fb3584ee5cf65fb2765f454ed428c7a0063da"
 
 [[package]]
 name = "arrayvec"
@@ -1555,10 +1555,11 @@ checksum = "97b3888a4aecf77e811145cadf6eef5901f4782c53886191b2f693f24761847c"
 
 [[package]]
 name = "like-shell"
-version = "0.2.1"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d1b39b86aa7bdd4b8a955f61d3caad8bb2745e8464272dd74a3a255ad90787f"
+checksum = "3f9401e36242eb786d3fa1ac4df92693797aa07b313a1a82e0a88a4bb1f0e200"
 dependencies = [
+ "anyhow",
  "fs_extra",
  "libc",
  "tempdir",
