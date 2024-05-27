@@ -11,6 +11,38 @@ pub struct Callback {
     pub func: String,
 }
 
+// TODO: Make optional
+#[derive(Clone, Deserialize, Debug)]
+pub struct UpstreamTimeouts {
+    #[serde(default="default_upstream_connect_timeout")]
+    pub connect_timeout: Duration,
+    #[serde(default="default_upstream_read_timeout")]
+    pub read_timeout: Duration,
+    #[serde(default="default_upstream_total_timeout")]
+    pub total_timeout: Duration,
+}
+
+#[derive(Clone, Deserialize, Debug)]
+pub struct RequestHeaders {
+    pub remove: Vec<String>,
+    pub add: Vec<(String, String)>,
+}
+
+#[derive(Clone, Deserialize, Debug)]
+pub struct ResponseHeaders {
+    pub remove: Vec<String>,
+    pub add: Vec<(String, String)>,
+    #[serde(default="default_show_hit_miss")]
+    pub show_hit_miss: bool,
+    #[serde(default="default_add_forwarded_from_header")]
+    pub add_forwarded_from_header: bool,
+}
+
+#[derive(Clone, Deserialize, Debug)]
+pub struct CacheConfig {
+    pub cache_timeout: Duration,
+}
+
 #[derive(Clone, Deserialize, Debug)]
 pub struct Config {
     #[serde(default="default_host")]
@@ -19,19 +51,10 @@ pub struct Config {
     pub port: u16,
     pub our_secret: Option<String>, // simple Bearer authentication
     pub upstream_prefix: Option<String>,
-    pub cache_timeout: Duration,
-    pub remove_request_headers: Vec<String>,
-    pub add_request_headers: Vec<(String, String)>,
-    pub remove_response_headers: Vec<String>,
-    pub add_response_headers: Vec<(String, String)>,
-    #[serde(default="default_show_hit_miss")]
-    pub show_hit_miss: bool,
-    #[serde(default="default_upstream_connect_timeout")]
-    pub upstream_connect_timeout: Duration,
-    #[serde(default="default_upstream_read_timeout")]
-    pub upstream_read_timeout: Duration,
-    #[serde(default="default_add_forwarded_from_header")]
-    pub add_forwarded_from_header: bool,
+    pub cache: CacheConfig,
+    pub request_headers: RequestHeaders,
+    pub response_headers: ResponseHeaders,
+    pub upstream_timeouts: UpstreamTimeouts,
     #[serde(default="default_ic_local")]
     pub ic_local: bool,
     pub ic_url: Option<String>,
@@ -56,6 +79,10 @@ fn default_upstream_connect_timeout() -> Duration {
 
 fn default_upstream_read_timeout() -> Duration {
     Duration::from_secs(60) // I set it big, for the use case of OpenAI API
+}
+
+fn default_upstream_total_timeout() -> Duration {
+    Duration::from_secs(120) // I set it big, for the use case of OpenAI API
 }
 
 fn default_add_forwarded_from_header() -> bool {

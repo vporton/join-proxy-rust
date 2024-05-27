@@ -94,7 +94,7 @@ async fn prepare_request(req: &actix_web::HttpRequest, body: &web::Bytes, config
     let request_headers = req.headers().into_iter()
         .map(|h| (h.0.clone(), h.1.clone()))
         .filter(|h|
-            !config.remove_request_headers.contains(&h.0.to_string()) ||
+            !config.request_headers.remove.contains(&h.0.to_string()) ||
                 h.0 == http_for_actix::HeaderName::from_static("host"))
         .chain(
             state.as_ref().additional_response_headers.iter().map(|h| (h.0.clone(), h.1.clone()))
@@ -149,7 +149,7 @@ async fn proxy(
         std::mem::drop(cache_lock);
 
         let mut response = deserialize_http_response(serialized_response.as_slice())?;
-        if config.show_hit_miss {
+        if config.response_headers.show_hit_miss {
             response.headers_mut().append(
                 http_for_actix::HeaderName::from_str("X-JoinProxy-Response").unwrap(),
                 http_for_actix::HeaderValue::from_str("Hit").unwrap(),
@@ -184,14 +184,14 @@ async fn proxy(
             );
         }
 
-        if config.show_hit_miss {
+        if config.response_headers.show_hit_miss {
             actix_response.headers_mut().append(
                 http_for_actix::HeaderName::from_str("X-JoinProxy-Response").unwrap(),
                 http_for_actix::HeaderValue::from_str("Miss").unwrap(),
             );
         }
         // "content-length", "content-encoding" // TODO
-        if config.add_forwarded_from_header {
+        if config.response_headers.add_forwarded_from_header {
             if let Some(addr) = req.head().peer_addr {
                 actix_response.headers_mut().append(
                     http_for_actix::HeaderName::from_str("X-Forwarded-For").unwrap(),
@@ -202,7 +202,7 @@ async fn proxy(
         for k in state.response_headers_to_remove.iter() {
             actix_response.headers_mut().remove(k);
         }
-        for (k, v) in config.add_response_headers.iter() {
+        for (k, v) in config.response_headers.add.iter() {
             actix_response.headers_mut().append(
                 http_for_actix::HeaderName::from_str(k).map_err(|_| InvalidHeaderNameError::default())?,
                 http_for_actix::HeaderValue::from_str(&v).map_err(|_| InvalidHeaderValueError::default())?
@@ -232,9 +232,9 @@ async fn main() -> anyhow::Result<()> {
 
     let server_url = config.host.clone() + ":" + config.port.to_string().as_str();
 
-    let cache = Arc::new(Mutex::new(BinaryMemCache::new(config.cache_timeout)));
+    let cache = Arc::new(Mutex::new(BinaryMemCache::new(config.cache.cache_timeout)));
 
-    let additional_response_headers = &config.add_request_headers;
+    let additional_response_headers = &config.request_headers.add;
     let additional_response_headers = additional_response_headers.into_iter().map(
         |v| -> MyResult<_> {
             Ok((
@@ -249,7 +249,7 @@ async fn main() -> anyhow::Result<()> {
     let hop_by_hop = ["connection", "keep-alive", "te", "trailers", "transfer-encoding", "upgrade"];
     let response_headers_to_remove =
         hop_by_hop.into_iter()
-            .chain(config.remove_response_headers.iter().map(|s| s.as_str()))
+            .chain(config.response_headers.remove.iter().map(|s| s.as_str()))
             .map(|h| http_for_actix::HeaderName::from_str(h).map_err(|_| InvalidHeaderNameError::default().into()));
     let response_headers_to_remove = response_headers_to_remove.collect::<MyResult<Vec<_>>>()?;
     let response_headers_to_remove = Arc::new(response_headers_to_remove);
@@ -273,8 +273,9 @@ async fn main() -> anyhow::Result<()> {
     HttpServer::new(move || {
         let state = State {
             client: ClientBuilder::new()
-                .connect_timeout(config.upstream_connect_timeout)
-                .read_timeout(config.upstream_read_timeout)
+                .connect_timeout(config.upstream_timeouts.connect_timeout)
+                .read_timeout(config.upstream_timeouts.read_timeout)
+                .timeout(config.upstream_timeouts.total_timeout)
                 .build().unwrap(),
             additional_response_headers: additional_response_headers.clone(),
             response_headers_to_remove: response_headers_to_remove.clone(),
