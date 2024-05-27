@@ -20,7 +20,7 @@ use crate::config::Config;
 #[derive(clap::Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(short, long="config", default_value="config.json")]
+    #[arg(short, long="config", default_value="config.toml")]
     config_file: String,
 }
 
