@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+dotenv = "0.15.0"
+env = "0.0.0"
 ic-agent = "0.35.0"
 like-shell = "0.2.3"
 tempdir = "0.3.7"
