@@ -226,7 +226,7 @@ async fn main() -> anyhow::Result<()> {
     let config: Config = toml::from_str(&config_string)
         .map_err(|e| anyhow!("Cannot read config file {}: {}", args.config_file, e))?;
 
-    let server_url = "localhost:".to_string() + config.port.to_string().as_str();
+    let server_url = config.host.clone() + ":" + config.port.to_string().as_str();
 
     let cache = Arc::new(Mutex::new(BinaryMemCache::new(config.cache_timeout)));
 

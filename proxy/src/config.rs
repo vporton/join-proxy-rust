@@ -13,6 +13,8 @@ pub struct Callback {
 
 #[derive(Clone, Deserialize, Debug)]
 pub struct Config {
+    #[serde(default="default_host")]
+    pub host: String,
     #[serde(default="default_port")]
     pub port: u16,
     pub our_secret: Option<String>, // simple Bearer authentication
@@ -34,6 +36,10 @@ pub struct Config {
     #[serde(default="default_ic_local")]
     pub ic_local: bool,
     pub callback: Option<Callback>,
+}
+
+fn default_host() -> String {
+    "localhost".to_string()
 }
 
 fn default_port() -> u16 {
