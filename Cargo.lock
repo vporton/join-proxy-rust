@@ -1574,9 +1574,9 @@ checksum = "97b3888a4aecf77e811145cadf6eef5901f4782c53886191b2f693f24761847c"
 
 [[package]]
 name = "like-shell"
-version = "0.2.6"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2063089c1d6323c9c7812ab3c93adeabba63bfbbb870f31e84d1ecf330869bb2"
+checksum = "4aa7ab38921ee71b59acfb9430c936bc7db9c1aee839f1ac5c2a5d74242c1074"
 dependencies = [
  "anyhow",
  "fs_extra",
