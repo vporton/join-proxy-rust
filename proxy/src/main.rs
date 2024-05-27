@@ -2,7 +2,7 @@ mod errors;
 mod cache;
 mod config;
 
-use std::{fs::File, io::Read, str::{from_utf8, FromStr}, sync::Arc};
+use std::{fs::read_to_string, str::{from_utf8, FromStr}, sync::Arc};
 
 use actix_web::{http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
 use anyhow::anyhow;
@@ -219,10 +219,8 @@ async fn proxy(
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let mut config_file = File::open(&args.config_file)
-        .map_err(|e| anyhow!("Cannot open config file {}: {}", args.config_file, e))?;
-    let mut config_string = String::new();
-    config_file.read_to_string(&mut config_string)?;
+    let config_string = read_to_string(&args.config_file)
+        .map_err(|e| anyhow!("Cannot read config file {}: {}", args.config_file, e))?;
     let mut config: Config = toml::from_str(&config_string)
         .map_err(|e| anyhow!("Cannot read config file {}: {}", args.config_file, e))?;
 
