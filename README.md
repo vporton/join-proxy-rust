@@ -8,7 +8,7 @@ This is a proxy that intentionally delivers outdated data (ignoring, for instanc
 It is intended mainly to direct IC outcalls to this proxy,
 in order for do one, not 13 or more requests to an upstream in a single outcall.
 Thus you, for example, pay 13x less for OpenAI tokens, if IC is connected to it through
-this proxy.
+this proxy. It also helps against reaching API throttling.
 
 It has special support for [Internet Computer](https://internetcomputer.org/), namely it can ask
 IC to authenticate every request.
