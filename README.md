@@ -69,7 +69,7 @@ total_timeout = "60s" # total timeout from request start to request end
 # Modify headers in requests to an upstream.
 [request_headers]
 remove = ["X-Proxy"] # remove these headers 
-add = [["Authorization": "Bearer <OPENAI-API-KEY>"]] # add headers
+add = [["Authorization", "Bearer <OPENAI-API-KEY>"]] # add headers
 
 # Modify headers in responses (e.g. to IC) from our proxy.
 [response_headers]
