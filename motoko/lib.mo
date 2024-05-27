@@ -24,8 +24,9 @@ module {
             request.headers.vals(),
             func ({name: Text; value: Text}) { name # "\t" # value });
         let headers_joined = Itertools.reduce<Text>(headers_list, func(a: Text, b: Text) {a # "\r" # b});
-        let ?headers_joined2 = headers_joined else {
-            Debug.trap("programming error");
+        let headers_joined2 = switch (headers_joined) {
+            case (?s) s;
+            case null "";
         };
         let header_part = method # "\n" # request.url # "\n" # headers_joined2;
 
@@ -84,7 +85,7 @@ module {
             case (?time) {
                 ignore BTree.delete(checker.hashes, Blob.compare, hash);
                 let ?subtree = BTree.get(checker.times, Int.compare, time) else {
-                    Debug.trap("programming error")
+                    Debug.trap("programming error");
                 };
                 if (BTree.size(subtree) == 1) {
                     ignore BTree.delete(checker.times, Int.compare, time)
