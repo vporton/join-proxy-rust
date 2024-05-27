@@ -139,14 +139,6 @@ async fn proxy(
     let serialized_request = serialize_http_request(&req, &body)?;
     let actix_request_hash = Sha256::digest(serialized_request.as_slice());
 
-    // Second level of defence: Ask back the calling canister:
-    if let (Some(agent), Some(callback)) = (&state.agent, &config.callback) {
-        let req_id = agent.update(&callback.canister, &callback.func)
-            .with_arg(Encode!(&actix_request_hash.as_slice())?).call().await?;
-        let res = agent.wait(req_id, callback.canister).await?;
-        let _ = Decode!(res.as_slice(), ())?; // check for errors
-    }    
-
     let mut cache = (***cache).lock().await;
 
     // We lock during the time of downloading from upstream to prevent duplicate requests with identical data.
@@ -165,6 +157,15 @@ async fn proxy(
         }
         response
     } else {
+        // Second level of defence: Ask back the calling canister.
+        // Do it only once per outcall (our response content isn't secure anyway).
+        if let (Some(agent), Some(callback)) = (&state.agent, &config.callback) {
+            let req_id = agent.update(&callback.canister, &callback.func)
+                .with_arg(Encode!(&actix_request_hash.as_slice())?).call().await?;
+            let res = agent.wait(req_id, callback.canister).await?;
+            let _ = Decode!(res.as_slice(), ())?; // check for errors
+        }
+
         let reqwest = prepare_request(&req, &body, &config, &state).await?;
         let reqwest_response = state.client.execute(reqwest).await?;
 

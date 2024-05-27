@@ -1,7 +1,5 @@
 TODO:
 
-- For multiple similar requests authenticate with IC only once.
-
 - Heavy `Vec` copy operations may hinder performance.
 
 - Make responses streaming.
