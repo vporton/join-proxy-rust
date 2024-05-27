@@ -27,7 +27,7 @@ actor HttpCaller {
     }) : Bool {
         switch (msg) {
             case (#checkRequest hash) {
-                Http.checkHttpRequest(requestsChecker, hash()); // FIXME: It is an update call.
+                Http.checkHttpRequest(requestsChecker, hash());
             };
             case _ {
                 // Should here check permissions:
