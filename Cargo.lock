@@ -836,6 +836,7 @@ dependencies = [
  "like-shell",
  "tempdir",
  "tokio",
+ "toml_edit",
 ]
 
 [[package]]
@@ -1573,9 +1574,9 @@ checksum = "97b3888a4aecf77e811145cadf6eef5901f4782c53886191b2f693f24761847c"
 
 [[package]]
 name = "like-shell"
-version = "0.2.3"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f9401e36242eb786d3fa1ac4df92693797aa07b313a1a82e0a88a4bb1f0e200"
+checksum = "2063089c1d6323c9c7812ab3c93adeabba63bfbbb870f31e84d1ecf330869bb2"
 dependencies = [
  "anyhow",
  "fs_extra",
