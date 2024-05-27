@@ -12,6 +12,8 @@ actor HttpCaller {
         await* Http.checkedHttpRequest(requestsChecker, request, {timeout});
     };
 
+    /// This function is needed even, if you use `inspect`, because
+    /// `inspect` is basically a query call and query calls can be forged by a malicious replica.
     public shared func checkRequest(hash: Blob): async () {
         if (not Http.checkHttpRequest(requestsChecker, hash)) {
             Debug.trap("hacked HTTP request");
