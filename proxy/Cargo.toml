@@ -1,5 +1,5 @@
 [package]
-name = "joining-proxy-rust"
+name = "joining-proxy"
 version = "0.0.1"
 edition = "2021"
 
@@ -24,5 +24,6 @@ base64 = "0.22.1"
 tokio = "1.37.0"
 async-trait = "0.1.80"
 candid = "0.10.8"
+toml = "0.8.13"
 # lock_api = "0.4.12"
 # future-parking_lot = "0.3.3"

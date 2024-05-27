@@ -1,5 +1,6 @@
 use std::process::Command;
 
+use candid::Encode;
 use ic_agent::{export::Principal, Agent};
 use like_shell::run_successful_command;
 use dotenv::{dotenv, var};
@@ -34,7 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // let tmpl_dir = .join("tmpls");
     let test = Test::new().await?;
     run_successful_command(Command::new("dfx").args(["deploy"]))?;
-    let res = test.agent.update(&test_canister_id, "test").with_arg(Encode!(false)).call_and_wait().await;
+    let res = test.agent.update(&test_canister_id, "test").with_arg(Encode!(&false)?).call_and_wait().await;
     // TODO
     Ok(())
 }

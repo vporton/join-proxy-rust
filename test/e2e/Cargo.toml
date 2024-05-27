@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+candid = "0.10.8"
 dotenv = "0.15.0"
 env = "0.0.0"
 ic-agent = "0.35.0"

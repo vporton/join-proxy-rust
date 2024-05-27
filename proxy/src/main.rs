@@ -2,7 +2,7 @@ mod errors;
 mod cache;
 mod config;
 
-use std::{fs::File, str::{from_utf8, FromStr}, sync::Arc};
+use std::{fs::File, io::Read, str::{from_utf8, FromStr}, sync::Arc};
 
 use actix_web::{http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
 use anyhow::anyhow;
@@ -218,9 +218,11 @@ async fn proxy(
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let file = File::open(&args.config_file)
+    let mut file = File::open(&args.config_file)
         .map_err(|e| anyhow!("Cannot open config file {}: {}", args.config_file, e))?;
-    let config: Config = serde_json::from_reader(file)
+    let mut config_string = String::new();
+    file.read_to_string(&mut config_string)?;
+    let config: Config = toml::from_str(&config_string)
         .map_err(|e| anyhow!("Cannot read config file {}: {}", args.config_file, e))?;
 
     let server_url = "localhost:".to_string() + config.port.to_string().as_str();
