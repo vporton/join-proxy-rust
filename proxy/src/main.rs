@@ -223,8 +223,12 @@ async fn main() -> anyhow::Result<()> {
         .map_err(|e| anyhow!("Cannot open config file {}: {}", args.config_file, e))?;
     let mut config_string = String::new();
     config_file.read_to_string(&mut config_string)?;
-    let config: Config = toml::from_str(&config_string)
+    let mut config: Config = toml::from_str(&config_string)
         .map_err(|e| anyhow!("Cannot read config file {}: {}", args.config_file, e))?;
+
+    if config.ic_url.is_none() && config.ic_local {
+        config.ic_url = Some("http://localhost:8000".to_string())
+    }
 
     let server_url = config.host.clone() + ":" + config.port.to_string().as_str();
 

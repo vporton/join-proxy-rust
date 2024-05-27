@@ -32,9 +32,9 @@ pub struct Config {
     pub upstream_read_timeout: Duration,
     #[serde(default="default_add_forwarded_from_header")]
     pub add_forwarded_from_header: bool,
-    pub ic_url: Option<String>,
     #[serde(default="default_ic_local")]
     pub ic_local: bool,
+    pub ic_url: Option<String>,
     pub callback: Option<Callback>,
 }
 
