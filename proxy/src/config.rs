@@ -14,11 +14,11 @@ pub struct Callback {
 // TODO: Make optional
 #[derive(Clone, Deserialize, Debug)]
 pub struct UpstreamTimeouts {
-    #[serde(default="default_upstream_connect_timeout")]
+    #[serde(default="default_upstream_connect_timeout", deserialize_with = "parse_duration")]
     pub connect_timeout: Duration,
-    #[serde(default="default_upstream_read_timeout")]
+    #[serde(default="default_upstream_read_timeout", deserialize_with = "parse_duration")]
     pub read_timeout: Duration,
-    #[serde(default="default_upstream_total_timeout")]
+    #[serde(default="default_upstream_total_timeout", deserialize_with = "parse_duration")]
     pub total_timeout: Duration,
 }
 
@@ -40,6 +40,7 @@ pub struct ResponseHeaders {
 
 #[derive(Clone, Deserialize, Debug)]
 pub struct CacheConfig {
+    #[serde(deserialize_with = "parse_duration")]
     pub cache_timeout: Duration,
 }
 
@@ -91,6 +92,25 @@ fn default_add_forwarded_from_header() -> bool {
 
 fn default_ic_local() -> bool {
     false
+}
+
+fn parse_duration<'de, D>(deserializer: D) -> Result<Duration, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = serde::Deserialize::deserialize(deserializer)?;
+
+    let (value_str, unit) = s.split_at(s.len() - 1);
+    let value: u64 = value_str.parse().map_err(serde::de::Error::custom)?;
+
+    match unit {
+        "d" => Ok(Duration::from_secs(value*3600*24)),
+        "h" => Ok(Duration::from_secs(value*3600)),
+        "m" => Ok(Duration::from_secs(value*60)),
+        "s" => Ok(Duration::from_secs(value)),
+        "ms" => Ok(Duration::from_millis(value)),
+        _ => Err(serde::de::Error::custom("Invalid duration unit")),
+    }
 }
 
 fn deserialize_canister_id<'de, D>(deserializer: D) -> Result<Principal, D::Error>

@@ -58,7 +58,7 @@ canister = "a3shf-5eaaa-aaaaa-qaafa-cai" # the principal of the canister used fo
 func = "checkRequest" # the shared method used for authorization
 
 [cache]
-cache_timeout = "1m" # How long responses are cached. See for format: https://chatgpt.com/share/4fb8f7c9-ad48-4cfe-a875-efcb6d36bbf1
+cache_timeout = "1m" # How long responses are cached.
 
 # Timeouts for a connection from the proxy to an upstream.
 [upstream_timeouts]

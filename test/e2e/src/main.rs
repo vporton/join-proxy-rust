@@ -50,10 +50,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cargo_manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     dotenv().ok();
 
+    // Before `temp_dir_from_template()`, because that changes the current dir:
+    run_successful_command(Command::new("dfx").args(["deploy"]))?;
+
     let workspace_dir = cargo_manifest_dir.join("..").join("..");
     let tmpl_dir = cargo_manifest_dir.join("tmpls").join("basic");
     let test = Test::new(&tmpl_dir).await?;
-    run_successful_command(Command::new("dfx").args(["deploy"]))?;
     let _test_http = TemporaryChild::spawn(&mut Command::new(
         workspace_dir.join("target").join("debug").join("test-server")
     ), Capture { stdout: None, stderr: None });
