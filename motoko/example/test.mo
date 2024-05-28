@@ -7,7 +7,7 @@ import Text "mo:base/Text";
 actor Test {
     public shared func test(addHost: Bool): async Text {
         let res = await Call.callHttp({
-            url = "http://localhost:8081/";
+            url = "https://localhost:8443";
             max_response_bytes = ?10_000;
             headers = if (addHost) [{name = "Host"; value="localhost:8081"}] else [];
             body = null;

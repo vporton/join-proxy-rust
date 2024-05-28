@@ -2,7 +2,7 @@ use std::{fs::{read_to_string, write}, path::Path, process::Command, time::Durat
 
 use candid::{Decode, Encode};
 use ic_agent::{export::Principal, Agent};
-use like_shell::{run_successful_command, temp_dir_from_template, Capture, TemporaryChild};
+use like_shell::{temp_dir_from_template, Capture, TemporaryChild};
 use dotenv::{dotenv, var};
 use tempdir::TempDir;
 use tokio::time::sleep;
@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
 
     // Before `temp_dir_from_template()`, because that changes the current dir:
-    run_successful_command(Command::new("dfx").args(["deploy"]))?;
+    // run_successful_command(Command::new("dfx").args(["deploy"]))?;
 
     let workspace_dir = cargo_manifest_dir.join("..").join("..");
     let tmpl_dir = cargo_manifest_dir.join("tmpls").join("basic");

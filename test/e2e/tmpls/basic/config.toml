@@ -1,12 +1,16 @@
-host = "localhost"
-port = 8080
-
 # Simple Bearer authentication. On IC platform you should use callback authentication instead.
 #our_secret = "<KEY>"
 
 upstream_prefix = "https://localhost:8081"
 
 ic_local = true
+
+[serve]
+host = "localhost"
+port = 8443
+https = true
+cert_file = "certs/cert.unsave.pem"
+key_file = "certs/key.unsave.pem"
 
 [callback]
 # canister = "a3shf-5eaaa-aaaaa-qaafa-cai"
