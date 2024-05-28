@@ -7,7 +7,7 @@ use std::{fs::{read_to_string, File}, io::BufReader, str::{from_utf8, FromStr}, 
 use rustls::ServerConfig;
 use rustls_pemfile::{certs, pkcs8_private_keys};
 use actix_web::{http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use cache::{cache::BinaryCache, mem_cache::BinaryMemCache};
 use clap::Parser;
 use errors::{InvalidHeaderNameError, InvalidHeaderValueError, MyCorruptedDBError, MyResult};
@@ -294,9 +294,10 @@ async fn main() -> anyhow::Result<()> {
     });
     if is_https {
         if let (Some(cert_file), Some(key_file)) = (cert_file, key_file) {
-            let cert_file = &mut BufReader::new(File::open(cert_file)?);
-            let key_file = &mut BufReader::new(File::open(key_file)?);
-            let cert_chain = certs(cert_file).collect::<Result<Vec<_>, _>>()?;
+            let cert_file = &mut BufReader::new(File::open(cert_file).context("Can't read HTTPS cert.")?);
+            let key_file = &mut BufReader::new(File::open(key_file).context("Can't read HTTPS key.")?);
+            let cert_chain = certs(cert_file).collect::<Result<Vec<_>, _>>()
+                .context("Can't parse HTTPS certs chain.")?;
             let key = pkcs8_private_keys(key_file)
                 .next().transpose()?.ok_or(anyhow!("No private key in the file."))?;
             server.bind_rustls_0_23(
