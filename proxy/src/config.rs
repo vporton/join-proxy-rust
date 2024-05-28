@@ -45,11 +45,16 @@ pub struct CacheConfig {
 }
 
 #[derive(Clone, Deserialize, Debug)]
-pub struct Config {
+pub struct Serve {
     #[serde(default="default_host")]
     pub host: String,
     #[serde(default="default_port")]
     pub port: u16,
+}
+
+#[derive(Clone, Deserialize, Debug)]
+pub struct Config {
+    pub serve: Serve,
     pub our_secret: Option<String>, // simple Bearer authentication
     pub upstream_prefix: Option<String>,
     pub cache: CacheConfig,

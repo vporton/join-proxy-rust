@@ -38,10 +38,6 @@ where `<TOML>` is a [TOML](https://toml.io) file with configuration. By default 
 An example of `config.toml`:
 
 ```toml
-# The host and port to attach:
-host = "localhost" # "localhost" by default
-port = 8080 # 8080 by default
-
 # Simple Bearer authentication. On IC platform you should use callback authentication instead.
 # If you omit this entry, no Bearer authenticatio is done.
 our_secret = "<KEY>"
@@ -50,6 +46,11 @@ upstream_prefix = "https://api.openai.com" # by default Host: header is used
 
 ic_local = false # if to use a local testnet, DON'T SET THIS TO TRUE IN PRODUCTION
 ic_url = "https://localhost:8000" # URL to connect to IC (for authorization), the default value is determined by `ic_local`
+
+[serve]
+# The host and port to attach:
+host = "localhost" # "localhost" by default
+port = 8080 # 8080 by default
 
 # If you omit this section, no authorization by callbacks is done.
 # WARNING: In this case your proxy is eligible to unauthorized connections, such as stealing your OpenAI tokens.

@@ -228,7 +228,7 @@ async fn main() -> anyhow::Result<()> {
         config.ic_url = Some("http://localhost:8000".to_string())
     }
 
-    let server_url = config.host.clone() + ":" + config.port.to_string().as_str();
+    let server_url = config.serve.host.clone() + ":" + config.serve.port.to_string().as_str();
 
     let cache = Arc::new(Mutex::new(BinaryMemCache::new(config.cache.cache_timeout)));
 
