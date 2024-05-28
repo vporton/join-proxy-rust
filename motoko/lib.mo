@@ -71,7 +71,7 @@ module {
             for ((hash, _) in BTree.entries(hashes)) {
                 ignore BTree.delete(checker.hashes, Blob.compare, hash);
             };
-            ignore BTree.deleteMin(checker.times, Int.compare);
+            ignore BTree.delete(checker.times, Int.compare, minTime);
         };
     };
 
