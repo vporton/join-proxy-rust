@@ -34,7 +34,7 @@ impl Test {
         // TODO: Specifying a specific port is a hack.
         let _dfx_daemon = TemporaryChild::spawn(&mut Command::new(
             "dfx"
-        ).args(["start"/*, "--host", "127.0.0.1:8000"*/]).current_dir(dir.path()), Capture { stdout: None, stderr: None })
+        ).arg("start").current_dir(dir.path()), Capture { stdout: None, stderr: None })
             .with_context(|| anyhow!("Starting DFX"))?;
         sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
         run_successful_command(Command::new("mops").arg("install").current_dir(dir.path()))
