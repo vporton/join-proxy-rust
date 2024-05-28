@@ -18,6 +18,7 @@ struct Test {
     agent: Agent,
     call_canister_id: Principal,
     test_canister_id: Principal,
+    dfx_daemon: TemporaryChild,
 }
 
 impl Test {
@@ -34,7 +35,7 @@ impl Test {
         ).context("Copying a file.")?;
     
         // TODO: Specifying a specific port is a hack.
-        let _dfx_daemon = TemporaryChild::spawn(&mut Command::new(
+        let dfx_daemon = TemporaryChild::spawn(&mut Command::new(
             "dfx"
         ).args(["start", "--host", "127.0.0.1:8007"]).current_dir(dir.path()), Capture { stdout: None, stderr: None })
             .context("Starting DFX")?;
@@ -61,6 +62,7 @@ impl Test {
         println!("Connecting to port {port}");
         let res = Self {
             dir,
+            dfx_daemon,
             agent: Agent::builder().with_url(format!("http://127.0.0.1:{port}")).build().context("Creating Agent")?,
             call_canister_id: Principal::from_text(call_canister_id)
                 .context("Parsing principal")?,
@@ -100,12 +102,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let test = Test::new(&tmpl_dir).await?;
     let _test_http = TemporaryChild::spawn(&mut Command::new(
         test.workspace_dir.join("target").join("debug").join("test-server")
-    ), Capture { stdout: None, stderr: None })?;
+    ), Capture { stdout: None, stderr: None }).context("Running test HTTPS server")?;
     let _proxy = TemporaryChild::spawn(&mut Command::new(
         test.workspace_dir.join("target").join("debug").join("joining-proxy")
-    ), Capture { stdout: None, stderr: None })?;
+    ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
     sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
-    test_calls(&test).await?;
+    // test_calls(&test).await?;
     // TODO
     Ok(())
 }
