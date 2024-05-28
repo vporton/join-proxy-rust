@@ -18,7 +18,7 @@ struct Test {
     agent: Agent,
     call_canister_id: Principal,
     test_canister_id: Principal,
-    dfx_daemon: TemporaryChild,
+    _dfx_daemon: TemporaryChild,
 }
 
 impl Test {
@@ -62,7 +62,7 @@ impl Test {
         println!("Connecting to port {port}");
         let res = Self {
             dir,
-            dfx_daemon,
+            _dfx_daemon: dfx_daemon,
             agent: Agent::builder().with_url(format!("http://127.0.0.1:{port}")).build().context("Creating Agent")?,
             call_canister_id: Principal::from_text(call_canister_id)
                 .context("Parsing principal")?,
@@ -85,11 +85,11 @@ impl Test {
 
 async fn test_calls(test: &Test) -> Result<(), Box<dyn std::error::Error>> {
     for add_host in [false, true] {
-        // let res =
-        //     test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&add_host).unwrap())
-        //         .call_and_wait().await.context("Call to IC.")?;
-        // assert_eq!(Decode!(&res, String).context("Decoding test call response.")?, "Test");
-        // // TODO: Check two parallel requests.
+        let res =
+            test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&add_host).unwrap())
+                .call_and_wait().await.context("Call to IC.")?;
+        assert_eq!(Decode!(&res, String).context("Decoding test call response.")?, "Test");
+        // TODO: Check two parallel requests.
     }
     Ok(())
 }
@@ -107,7 +107,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         test.workspace_dir.join("target").join("debug").join("joining-proxy")
     ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
     sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
-    // test_calls(&test).await?;
+    test_calls(&test).await?;
     // TODO
     Ok(())
 }
