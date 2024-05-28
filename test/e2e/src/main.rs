@@ -25,8 +25,9 @@ impl Test {
         let dir = temp_dir_from_template(tmpl_dir)?;
         dir::copy(workspace_dir.join("motoko"), dir.path(), &dir::CopyOptions::new())?; // FIXME: What should be `copy_inside` value?
         file::copy(
-            workspace_dir.join("mops.toml"), dir.path().join("mops.toml"),
-            &file::CopyOptions::new()
+            workspace_dir.join("mops.toml"),
+            dir.path().join("mops.toml"),
+            &file::CopyOptions::new(),
         )?;
         dotenv().ok();
     
