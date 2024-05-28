@@ -16,6 +16,7 @@ struct Test {
     // cargo_manifest_dir: PathBuf,
     workspace_dir: PathBuf,
     agent: Agent,
+    call_canister_id: Principal,
     test_canister_id: Principal,
 }
 
@@ -54,12 +55,15 @@ impl Test {
             let file = File::open(path).with_context(|| format!("Opening canister_ids.json"))?;
             serde_json::from_reader(file).expect("Error parsing JSON")
         };
+        let call_canister_id = canister_ids.as_object().unwrap()["call"].as_object().unwrap()["local"].as_str().unwrap();
         let test_canister_id = canister_ids.as_object().unwrap()["test"].as_object().unwrap()["local"].as_str().unwrap();
 
         println!("Connecting to port {port}");
         let res = Self {
             dir,
             agent: Agent::builder().with_url(format!("http://localhost:{port}")).build().context("Creating Agent")?,
+            call_canister_id: Principal::from_text(call_canister_id)
+                .context("Parsing principal")?,
             test_canister_id: Principal::from_text(test_canister_id)
                 .context("Parsing principal")?,
             // cargo_manifest_dir: cargo_manifest_dir.to_path_buf(),
@@ -70,7 +74,7 @@ impl Test {
         let toml_path = res.dir.path().join("config.toml");
         let toml = read_to_string(&toml_path).context("Reading config.")?;
         let mut doc = toml.parse::<DocumentMut>().context("Invalid TOML")?;
-        doc["callback"]["canister"] = value(res.test_canister_id.to_string());
+        doc["callback"]["canister"] = value(res.call_canister_id.to_string());
         write(&toml_path, doc.to_string()).context("Writing modified config.")?;
 
         Ok(res)
@@ -80,7 +84,7 @@ impl Test {
 async fn test_calls(test: &Test) -> Result<(), Box<dyn std::error::Error>> {
     for add_host in [false, true] {
         let res = // TODO
-            test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&add_host).unwrap())
+            test.agent.update(&test.test_canister_id, "checkRequest").with_arg(Encode!(&add_host).unwrap())
                 .call_and_wait().await.context("Back-call to IC.")?;
         assert_eq!(Decode!(&res, String).context("Decoding test call response.")?, "Test");
         // TODO: Check two parallel requests.
