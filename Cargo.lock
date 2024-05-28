@@ -942,6 +942,7 @@ dependencies = [
  "fs_extra",
  "ic-agent",
  "like-shell",
+ "serde_json",
  "tempdir",
  "tokio",
  "toml_edit",
