@@ -2,13 +2,15 @@ import Http "../";
 import Types "../HttpTypes";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
+import Cycles "mo:base/ExperimentalCycles";
 
 actor HttpCaller {
     stable let requestsChecker = Http.newHttpRequestsChecker();
 
     let timeout = 60 * 1_000_000_000; // 1 min
 
-    public shared func callHttp(request: Types.HttpRequestArgs): async Types.HttpResponsePayload {
+    public shared func callHttp(request: Types.HttpRequestArgs, cycles: Nat): async Types.HttpResponsePayload {
+        Cycles.add<system>(cycles);
         await* Http.checkedHttpRequest(requestsChecker, request, {timeout});
     };
 
@@ -23,7 +25,7 @@ actor HttpCaller {
     system func inspect({
         // caller : Principal;
         // arg : Blob;
-        msg : {#callHttp : () -> Types.HttpRequestArgs; #checkRequest : () -> Blob}
+        msg : {#callHttp : () -> (Types.HttpRequestArgs, Nat); #checkRequest : () -> Blob}
     }) : Bool {
         switch (msg) {
             case (#checkRequest hash) {

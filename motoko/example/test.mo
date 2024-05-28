@@ -3,11 +3,9 @@ import Blob "mo:base/Blob";
 import Bool "mo:base/Bool";
 import Debug "mo:base/Debug";
 import Text "mo:base/Text";
-import Cycles "mo:base/ExperimentalCycles";
 
 actor Test {
     public shared func test(addHost: Bool): async Text {
-        ignore Cycles.add<system>(12_000_000); // TODO: arbitrary
         let res = await Call.callHttp({
             url = "http://localhost:8081/";
             max_response_bytes = ?10_000;
@@ -15,7 +13,7 @@ actor Test {
             body = null;
             method = #get;
             transform = null;
-        });
+        }, 12_000_000);
         let ?body = Text.decodeUtf8(Blob.fromArray(res.body)) else {
             Debug.trap("No response body.")
         };

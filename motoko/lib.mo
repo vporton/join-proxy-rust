@@ -82,7 +82,7 @@ module {
         switch (BTree.get(checker.hashes, Blob.compare, hash)) {
             case (?oldTime) {
                 let ?subtree = BTree.get(checker.times, Int.compare, oldTime) else {
-                    Debug.trap("programming error");
+                    Debug.trap("programming error: zero times");
                 };
                 ignore BTree.delete(checker.hashes, Blob.compare, hash);
                 if (BTree.size(subtree) == 1) {
@@ -100,7 +100,11 @@ module {
         ignore BTree.insert(checker.hashes, Blob.compare, hash, now);
         let subtree = switch (BTree.get(checker.times, Int.compare, now)) {
             case (?hashes) hashes;
-            case (null) BTree.init<Blob, ()>(null);
+            case (null) {
+                let hashes = BTree.init<Blob, ()>(null);
+                ignore BTree.insert(checker.times, Int.compare, now, hashes);
+                hashes;
+            }
         };
         ignore BTree.insert(subtree, Blob.compare, hash, ());
     };
