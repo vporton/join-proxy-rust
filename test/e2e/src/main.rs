@@ -18,7 +18,7 @@ impl Test {
     pub async fn new(tmpl_dir: &Path) -> Result<Self, Box<dyn std::error::Error>> {
         let res = Self {
             dir: temp_dir_from_template(tmpl_dir)?,
-            agent: Agent::builder().with_url("http://localhost:39143").build()?,
+            agent: Agent::builder().with_url("http://localhost:4943").build()?,
             test_canister_id: Principal::from_text(var("CANISTER_ID_TEST")?)?,
         };
 

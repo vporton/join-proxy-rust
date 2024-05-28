@@ -68,27 +68,25 @@ module {
             if (minTime > threshold) {
                 break r;
             };
-            ignore BTree.deleteMin(checker.times, Int.compare);
             for ((hash, _) in BTree.entries(hashes)) {
                 ignore BTree.delete(checker.hashes, Blob.compare, hash);
             };
+            ignore BTree.deleteMin(checker.times, Int.compare);
         };
     };
 
     public func announceHttpRequestHash(checker: HttpRequestsChecker, hash: Blob, params: {timeout: Nat}) {
         deleteOldHttpRequests(checker, params);
-        let now = Time.now();
-        ignore BTree.insert<Blob, Int>(checker.hashes, Blob.compare, hash, now);
 
         // If there is an old hash equal to this, first delete it to clean times:
         switch (BTree.get(checker.hashes, Blob.compare, hash)) {
-            case (?time) {
-                ignore BTree.delete(checker.hashes, Blob.compare, hash);
-                let ?subtree = BTree.get(checker.times, Int.compare, time) else {
+            case (?oldTime) {
+                let ?subtree = BTree.get(checker.times, Int.compare, oldTime) else {
                     Debug.trap("programming error");
                 };
+                ignore BTree.delete(checker.hashes, Blob.compare, hash);
                 if (BTree.size(subtree) == 1) {
-                    ignore BTree.delete(checker.times, Int.compare, time)
+                    ignore BTree.delete(checker.times, Int.compare, oldTime);
                 } else {
                     ignore BTree.delete(subtree, Blob.compare, hash);
                 };
@@ -96,18 +94,20 @@ module {
             case null {};
         };
 
+        let now = Time.now();
+
         // Insert into two trees:
         ignore BTree.insert(checker.hashes, Blob.compare, hash, now);
-        switch (BTree.get(checker.times, Int.compare, now)) {
+        let subtree = switch (BTree.get(checker.times, Int.compare, now)) {
             case (?hashes) {
                 ignore BTree.insert(hashes, Blob.compare, hash, ());
+                hashes;
             };
             case null {
-                let subtree = BTree.init<Blob, ()>(null);
-                ignore BTree.insert(subtree, Blob.compare, hash, ());
-                ignore BTree.insert(checker.times, Int.compare, now, subtree);
+                BTree.init<Blob, ()>(null);
             }
         };
+        ignore BTree.insert(subtree, Blob.compare, hash, ());
     };
 
     public func announceHttpRequest(checker: HttpRequestsChecker, request: Types.HttpRequestArgs, params: {timeout: Nat}) {
