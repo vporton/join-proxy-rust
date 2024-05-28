@@ -99,13 +99,8 @@ module {
         // Insert into two trees:
         ignore BTree.insert(checker.hashes, Blob.compare, hash, now);
         let subtree = switch (BTree.get(checker.times, Int.compare, now)) {
-            case (?hashes) {
-                ignore BTree.insert(hashes, Blob.compare, hash, ());
-                hashes;
-            };
-            case null {
-                BTree.init<Blob, ()>(null);
-            }
+            case (?hashes) hashes;
+            case (null) BTree.init<Blob, ()>(null);
         };
         ignore BTree.insert(subtree, Blob.compare, hash, ());
     };
