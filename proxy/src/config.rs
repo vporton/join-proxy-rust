@@ -50,6 +50,10 @@ pub struct Serve {
     pub host: String,
     #[serde(default="default_port")]
     pub port: u16,
+    #[serde(default="default_https")]
+    pub https: bool,
+    pub cert_file: Option<String>,
+    pub key_file: Option<String>,
 }
 
 #[derive(Clone, Deserialize, Debug)]
@@ -73,6 +77,10 @@ fn default_host() -> String {
 
 fn default_port() -> u16 {
     8080
+}
+
+fn default_https() -> bool {
+    false
 }
 
 fn default_show_hit_miss() -> bool {

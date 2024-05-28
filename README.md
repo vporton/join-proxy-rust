@@ -51,6 +51,11 @@ ic_url = "https://localhost:8000" # URL to connect to IC (for authorization), th
 # The host and port to attach:
 host = "localhost" # "localhost" by default
 port = 8080 # 8080 by default
+https = false # use HTTPS (false by default)
+
+# HTTPS certificate:
+cert_file = "..."
+key_file = "..."
 
 # If you omit this section, no authorization by callbacks is done.
 # WARNING: In this case your proxy is eligible to unauthorized connections, such as stealing your OpenAI tokens.

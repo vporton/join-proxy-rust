@@ -2,8 +2,10 @@ mod errors;
 mod cache;
 mod config;
 
-use std::{fs::read_to_string, str::{from_utf8, FromStr}, sync::Arc};
+use std::{fs::{read_to_string, File}, io::BufReader, str::{from_utf8, FromStr}, sync::Arc};
 
+use rustls::ServerConfig;
+use rustls_pemfile::{certs, pkcs8_private_keys};
 use actix_web::{http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
 use anyhow::anyhow;
 use cache::{cache::BinaryCache, mem_cache::BinaryMemCache};
@@ -14,6 +16,7 @@ use ic_agent::Agent;
 use candid::{Decode, Encode};
 use sha2::{Digest, Sha256};
 use tokio::sync::Mutex;
+use anyhow::bail;
 
 use crate::config::Config;
 
@@ -268,7 +271,9 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
-    HttpServer::new(move || {
+    let (cert_file, key_file) = (config.serve.cert_file.clone(), config.serve.key_file.clone());
+    let is_https = config.serve.https;
+    let server = HttpServer::new(move || {
         let state = State {
             client: ClientBuilder::new()
                 .connect_timeout(config.upstream_timeouts.connect_timeout)
@@ -286,8 +291,30 @@ async fn main() -> anyhow::Result<()> {
             .app_data(Data::new(cache.clone()))
                 .route("/{_:.*}", web::route().to(proxy))
         )
-    })
-        .bind(server_url)?
+    });
+    if is_https {
+        if let (Some(cert_file), Some(key_file)) = (cert_file, key_file) {
+            let cert_file = &mut BufReader::new(File::open(cert_file)?);
+            let key_file = &mut BufReader::new(File::open(key_file)?);
+            let cert_chain = certs(cert_file).collect::<Result<Vec<_>, _>>()?;
+            let key = pkcs8_private_keys(key_file)
+                .next().transpose()?.ok_or(anyhow!("No private key in the file."))?;
+            server.bind_rustls_0_23(
+                server_url,
+                ServerConfig::builder().with_no_client_auth()
+                    // .with_client_cert_verifier(
+                    //     rustls::server::AllowAnyAuthenticatedClient::new(Arc::new(rustls::RootCertStore {
+                    //         roots: vec![/*ca_cert*/]
+                    //     })),
+                    // )
+                    .with_single_cert(cert_chain, rustls::pki_types::PrivateKeyDer::Pkcs8(key))? // TODO: correct?
+            )
+        } else {
+            bail!("No SSL certificate or key in config");
+        }
+    } else {
+        server.bind(server_url)
+    }?
         .run()
         .await.map_err(|e| e.into())
 }
