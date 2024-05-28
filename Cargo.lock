@@ -935,9 +935,11 @@ checksum = "56ce8c6da7551ec6c462cbaf3bfbc75131ebbfa1c944aeaa9dab51ca1c5f0c3b"
 name = "e2e"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "candid",
  "dotenv",
  "env",
+ "fs_extra",
  "ic-agent",
  "like-shell",
  "tempdir",

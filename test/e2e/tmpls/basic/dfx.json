@@ -1,0 +1,21 @@
+{
+  "canisters": {
+    "call": {
+      "type": "motoko",
+      "main": "motoko/example/call.mo"
+    },
+    "test": {
+      "type": "motoko",
+      "main": "motoko/example/test.mo",
+      "dependencies": ["call"]
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": "mops sources"
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}

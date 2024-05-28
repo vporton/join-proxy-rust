@@ -1,25 +1,52 @@
-use std::{fs::{read_to_string, write}, path::Path, process::Command, time::Duration};
+use std::{env::var, fs::{read_to_string, write}, path::{Path, PathBuf}, process::Command, time::Duration};
 
 use candid::{Decode, Encode};
+use fs_extra::{dir, file};
 use ic_agent::{export::Principal, Agent};
-use like_shell::{temp_dir_from_template, Capture, TemporaryChild};
-use dotenv::{dotenv, var};
+use like_shell::{run_successful_command, temp_dir_from_template, Capture, TemporaryChild};
+use dotenv::dotenv;
 use tempdir::TempDir;
 use tokio::time::sleep;
 use toml_edit::{value, DocumentMut};
+use anyhow::anyhow;
 
 struct Test {
     dir: TempDir,
+    // cargo_manifest_dir: PathBuf,
+    workspace_dir: PathBuf,
     agent: Agent,
     test_canister_id: Principal,
 }
 
 impl Test {
     pub async fn new(tmpl_dir: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+        let cargo_manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let workspace_dir = cargo_manifest_dir.join("..").join("..");
+        let dir = temp_dir_from_template(tmpl_dir)?;
+        dir::copy(workspace_dir.join("motoko"), dir.path(), &dir::CopyOptions::new())?; // FIXME: What should be `copy_inside` value?
+        file::copy(
+            workspace_dir.join("mops.toml"), dir.path().join("mops.toml"),
+            &file::CopyOptions::new()
+        )?;
+    
+        let _dfx_daemon = TemporaryChild::spawn(&mut Command::new(
+            "dfx"
+        ).arg("start").current_dir(dir.path()), Capture { stdout: None, stderr: None })
+            .map_err(|_| anyhow!("Starting DFX"))?;
+        sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
+        run_successful_command(Command::new("mops").arg("install").current_dir(dir.path()))
+            .map_err(|_| anyhow!("Installing MOPS packages."))?;
+        run_successful_command(Command::new("dfx").arg("deploy").current_dir(dir.path()))
+            .map_err(|_| anyhow!("Deploying."))?;
+        let port_str = read_to_string(dir.path().join(".dfx").join("network").join("local"))?;
+        let port: u16 = port_str.parse()?;
+
         let res = Self {
-            dir: temp_dir_from_template(tmpl_dir)?,
-            agent: Agent::builder().with_url("http://localhost:4943").build()?,
+            dir,
+            agent: Agent::builder().with_url(format!("http://localhost:{port}")).build()?,
             test_canister_id: Principal::from_text(var("CANISTER_ID_TEST")?)?,
+            // cargo_manifest_dir: cargo_manifest_dir.to_path_buf(),
+            workspace_dir: workspace_dir,
         };
 
         res.agent.fetch_root_key().await?; // DON'T USE this on mainnet
@@ -47,22 +74,19 @@ async fn test_calls(test: &Test) -> Result<(), Box<dyn std::error::Error>> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cargo_manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     dotenv().ok();
 
-    // Before `temp_dir_from_template()`, because that changes the current dir:
-    // run_successful_command(Command::new("dfx").args(["deploy"]))?;
-
-    let workspace_dir = cargo_manifest_dir.join("..").join("..");
+    let cargo_manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let tmpl_dir = cargo_manifest_dir.join("tmpls").join("basic");
+
     let test = Test::new(&tmpl_dir).await?;
     let _test_http = TemporaryChild::spawn(&mut Command::new(
-        workspace_dir.join("target").join("debug").join("test-server")
+        test.workspace_dir.join("target").join("debug").join("test-server")
     ), Capture { stdout: None, stderr: None });
     let _proxy = TemporaryChild::spawn(&mut Command::new(
-        workspace_dir.join("target").join("debug").join("joining-proxy")
+        test.workspace_dir.join("target").join("debug").join("joining-proxy")
     ), Capture { stdout: None, stderr: None });
-    sleep(Duration::from_millis(250)).await; // Wait till daemons start.
+    sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
     test_calls(&test).await?;
     // TODO
     Ok(())
