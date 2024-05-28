@@ -28,24 +28,22 @@ impl Test {
             workspace_dir.join("mops.toml"), dir.path().join("mops.toml"),
             &file::CopyOptions::new()
         )?;
+        dotenv().ok();
     
         // TODO: Specifying a specific port is a hack.
         let _dfx_daemon = TemporaryChild::spawn(&mut Command::new(
             "dfx"
-        ).args(["start", "--host", "127.0.0.1:8000"]).current_dir(dir.path()), Capture { stdout: None, stderr: None })
+        ).args(["start"/*, "--host", "127.0.0.1:8000"*/]).current_dir(dir.path()), Capture { stdout: None, stderr: None })
             .with_context(|| anyhow!("Starting DFX"))?;
         sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
         run_successful_command(Command::new("mops").arg("install").current_dir(dir.path()))
             .with_context(|| anyhow!("Installing MOPS packages."))?;
         run_successful_command(Command::new("dfx").arg("deploy").current_dir(dir.path()))
             .with_context(|| anyhow!("Deploying."))?;
-        run_successful_command(Command::new("ls").arg(dir.path().join(".dfx"))
-            .current_dir(dir.path())
-        )?;
-        // let port_str = read_to_string(
-        //     dir.path().join(".dfx").join("network").join("local").join("webserver-port"),
-        // ).with_context(|| anyhow!("Reading port."))?;
-        let port: u16 = 8000; // port_str.parse()?;
+        let port_str = read_to_string(
+            dir.path().join(".dfx").join("network").join("local").join("webserver-port"),
+        ).with_context(|| anyhow!("Reading port."))?;
+        let port: u16 = port_str.parse()?;
 
         let res = Self {
             dir,
@@ -58,7 +56,7 @@ impl Test {
         res.agent.fetch_root_key().await?; // DON'T USE this on mainnet
 
         let toml_path = res.dir.path().join("config.toml");
-        let toml = read_to_string(&toml_path)?;
+        let toml = read_to_string(&toml_path).context(anyhow!("Reading config."))?;
         let mut doc = toml.parse::<DocumentMut>().expect("invalid doc");
         doc["callback"]["canister"] = value(var("CANISTER_ID_TEST")?);
         write(&toml_path, doc.to_string())?;
@@ -71,7 +69,7 @@ async fn test_calls(test: &Test) -> Result<(), Box<dyn std::error::Error>> {
     for add_host in [false, true] {
         let res =
             test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&add_host)?)
-                .call_and_wait().await?;
+                .call_and_wait().await.context("Back-call to IC.")?;
         assert_eq!(Decode!(&res, String)?, "Test");
         // TODO: Check two parallel requests.
     }
@@ -80,8 +78,6 @@ async fn test_calls(test: &Test) -> Result<(), Box<dyn std::error::Error>> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    dotenv().ok();
-
     let cargo_manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let tmpl_dir = cargo_manifest_dir.join("tmpls").join("basic");
 
