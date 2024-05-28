@@ -8,7 +8,7 @@ use dotenv::dotenv;
 use tempdir::TempDir;
 use tokio::time::sleep;
 use toml_edit::{value, DocumentMut};
-use anyhow::anyhow;
+use anyhow::{Context, anyhow};
 
 struct Test {
     dir: TempDir,
@@ -29,17 +29,23 @@ impl Test {
             &file::CopyOptions::new()
         )?;
     
+        // TODO: Specifying a specific port is a hack.
         let _dfx_daemon = TemporaryChild::spawn(&mut Command::new(
             "dfx"
-        ).arg("start").current_dir(dir.path()), Capture { stdout: None, stderr: None })
-            .map_err(|_| anyhow!("Starting DFX"))?;
+        ).args(["start", "--host", "127.0.0.1:8000"]).current_dir(dir.path()), Capture { stdout: None, stderr: None })
+            .with_context(|| anyhow!("Starting DFX"))?;
         sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
         run_successful_command(Command::new("mops").arg("install").current_dir(dir.path()))
-            .map_err(|_| anyhow!("Installing MOPS packages."))?;
+            .with_context(|| anyhow!("Installing MOPS packages."))?;
         run_successful_command(Command::new("dfx").arg("deploy").current_dir(dir.path()))
-            .map_err(|_| anyhow!("Deploying."))?;
-        let port_str = read_to_string(dir.path().join(".dfx").join("network").join("local"))?;
-        let port: u16 = port_str.parse()?;
+            .with_context(|| anyhow!("Deploying."))?;
+        run_successful_command(Command::new("ls").arg(dir.path().join(".dfx"))
+            .current_dir(dir.path())
+        )?;
+        // let port_str = read_to_string(
+        //     dir.path().join(".dfx").join("network").join("local").join("webserver-port"),
+        // ).with_context(|| anyhow!("Reading port."))?;
+        let port: u16 = 8000; // port_str.parse()?;
 
         let res = Self {
             dir,
@@ -85,6 +91,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ), Capture { stdout: None, stderr: None });
     let _proxy = TemporaryChild::spawn(&mut Command::new(
         test.workspace_dir.join("target").join("debug").join("joining-proxy")
+    ), Capture { stdout: None, stderr: None });
+    let _test_server = TemporaryChild::spawn(&mut Command::new(
+        test.workspace_dir.join("target").join("debug").join("test-server")
     ), Capture { stdout: None, stderr: None });
     sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
     test_calls(&test).await?;

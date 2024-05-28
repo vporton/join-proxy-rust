@@ -16,6 +16,12 @@
       "packtool": "mops sources"
     }
   },
+  "networks": {
+    "local": {
+      "bind": "localhost:8000",
+      "type": "ephemeral"
+    }
+  },
   "output_env_file": ".env",
   "version": 1
 }
