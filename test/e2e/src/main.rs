@@ -2,7 +2,7 @@ use std::{fs::{read_to_string, write, File}, path::{Path, PathBuf}, process::Com
 
 use candid::{Decode, Encode};
 use fs_extra::{dir, file};
-use ic_agent::{export::Principal, identity::AnonymousIdentity, Agent};
+use ic_agent::{export::Principal, Agent};
 use like_shell::{run_successful_command, temp_dir_from_template, Capture, TemporaryChild};
 // use dotenv::dotenv;
 use tempdir::TempDir;
@@ -106,7 +106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _proxy = TemporaryChild::spawn(&mut Command::new(
         test.workspace_dir.join("target").join("debug").join("joining-proxy")
     ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
-    sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
+    sleep(Duration::from_millis(2000)).await; // Wait till daemons start.
     test_calls(&test).await?;
     // TODO
     Ok(())
