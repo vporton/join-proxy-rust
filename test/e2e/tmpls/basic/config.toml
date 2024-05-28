@@ -5,7 +5,7 @@ upstream_prefix = "https://localhost:8081"
 
 # TODO: Move this to [callback]
 ic_local = true
-ic_url = "http://localhost:8007"
+ic_url = "http://127.0.0.1:8007" # "http://localhost:8007"
 
 [serve]
 host = "localhost"
@@ -15,7 +15,6 @@ cert_file = "certs/cert.unsave.pem"
 key_file = "certs/key.unsave.pem"
 
 [callback]
-url = "http://localhost:8007" # the URL of the IC (by default, use mainnet)
 # canister = "a3shf-5eaaa-aaaaa-qaafa-cai"
 func = "checkRequest"
 

@@ -61,7 +61,7 @@ impl Test {
         println!("Connecting to port {port}");
         let res = Self {
             dir,
-            agent: Agent::builder().with_url(format!("http://localhost:{port}")).build().context("Creating Agent")?,
+            agent: Agent::builder().with_url(format!("http://127.0.0.1:{port}")).build().context("Creating Agent")?,
             call_canister_id: Principal::from_text(call_canister_id)
                 .context("Parsing principal")?,
             test_canister_id: Principal::from_text(test_canister_id)
@@ -83,7 +83,7 @@ impl Test {
 
 async fn test_calls(test: &Test) -> Result<(), Box<dyn std::error::Error>> {
     for add_host in [false, true] {
-        let res = // TODO
+        let res =
             test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&add_host).unwrap())
                 .call_and_wait().await.context("Back-call to IC.")?;
         assert_eq!(Decode!(&res, String).context("Decoding test call response.")?, "Test");
