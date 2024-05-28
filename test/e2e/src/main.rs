@@ -84,7 +84,7 @@ impl Test {
 async fn test_calls(test: &Test) -> Result<(), Box<dyn std::error::Error>> {
     for add_host in [false, true] {
         let res = // TODO
-            test.agent.update(&test.test_canister_id, "checkRequest").with_arg(Encode!(&add_host).unwrap())
+            test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&add_host).unwrap())
                 .call_and_wait().await.context("Back-call to IC.")?;
         assert_eq!(Decode!(&res, String).context("Decoding test call response.")?, "Test");
         // TODO: Check two parallel requests.
