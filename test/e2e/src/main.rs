@@ -59,7 +59,7 @@ impl Test {
         let call_canister_id = canister_ids.as_object().unwrap()["call"].as_object().unwrap()["local"].as_str().unwrap();
         let test_canister_id = canister_ids.as_object().unwrap()["test"].as_object().unwrap()["local"].as_str().unwrap();
 
-        println!("Connecting to port {port}");
+        println!("Connecting to DFX (port {port})");
         let res = Self {
             dir,
             _dfx_daemon: dfx_daemon,

@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4.6.0"
+log = "0.4.21"

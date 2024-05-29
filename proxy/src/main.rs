@@ -4,6 +4,7 @@ mod config;
 
 use std::{fs::{read_to_string, File}, io::BufReader, str::{from_utf8, FromStr}, sync::Arc};
 
+use log::info;
 use rustls::ServerConfig;
 use rustls_pemfile::{certs, pkcs8_private_keys};
 use actix_web::{http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
@@ -93,6 +94,7 @@ async fn prepare_request(req: &actix_web::HttpRequest, body: &web::Bytes, config
         "https://".to_string() + host
     };
     let url = url_prefix + req.path();
+    info!("Forwarding request to `{}`", url);
 
     let request_headers = req.headers().into_iter()
         .map(|h| (h.0.clone(), h.1.clone()))
@@ -128,6 +130,7 @@ async fn proxy(
 )
     -> MyResult<actix_web::HttpResponse>
 {
+    info!("Joining proxy received a request to {}", req.path());
     // First level of defence: X-JoinProxy-Key can be stolen by an IC replica owner:
     if let Some(our_secret) = &config.our_secret {
         let passed_key = req.headers()
@@ -171,6 +174,7 @@ async fn proxy(
 
         let reqwest = prepare_request(&req, &body, &config, &state).await?;
         let reqwest_response = state.client.execute(reqwest).await?;
+        info!("Upstream status: {}", reqwest_response.status());
 
         // We retrieved the response, immediately set and release the cache:
         (*cache_lock).set(Some(serialize_http_response(&reqwest_response, body.clone())?)).await;
