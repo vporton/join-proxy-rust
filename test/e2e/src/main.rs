@@ -97,7 +97,7 @@ async fn test_calls(test: &Test) -> Result<(), Box<dyn std::error::Error>> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cargo_manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let tmpl_dir = cargo_manifest_dir.join("tmpls").join("basic");
+    let tmpl_dir = cargo_manifest_dir.join("tmpl");
 
     let test = Test::new(&tmpl_dir).await?;
     let _test_http = TemporaryChild::spawn(&mut Command::new(

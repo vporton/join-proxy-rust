@@ -11,8 +11,8 @@ ic_url = "http://127.0.0.1:8007" # "http://localhost:8007"
 host = "localhost"
 port = 8443
 https = true
-cert_file = "certs/cert.unsafe.pem"
-key_file = "certs/key.unsafe.pem"
+cert_file = "localhost.crt"
+key_file = "localhost.key"
 
 [callback]
 # canister = "a3shf-5eaaa-aaaaa-qaafa-cai"
