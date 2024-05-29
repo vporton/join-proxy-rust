@@ -225,6 +225,8 @@ async fn proxy(
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
+    env_logger::init();
+
     let args = Args::parse();
     let config_string = read_to_string(&args.config_file)
         .map_err(|e| anyhow!("Cannot read config file {}: {}", args.config_file, e))?;

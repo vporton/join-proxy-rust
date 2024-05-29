@@ -10,6 +10,8 @@ async fn test_page() -> HttpResponse {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    env_logger::init();
+
     HttpServer::new(|| {
         App::new().route("/", web::get().to(test_page))
     })
