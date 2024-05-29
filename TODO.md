@@ -1,5 +1,7 @@
 TODO:
 
+- Option to specify proxy's identity.
+
 - Heavy `Vec` copy operations may hinder performance.
 
 - Make responses streaming.

@@ -39,4 +39,4 @@ RUN cargo build
 
 # CMD ./target/debug/test-server & ./target/debug/joining-proxy & sleep 2; curl https://localhost:8443/
 # CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=info && ./target/debug/e2e"
-CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=debug && ./target/debug/e2e"
+CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=info && ./target/debug/e2e"

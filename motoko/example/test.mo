@@ -5,6 +5,7 @@ import Debug "mo:base/Debug";
 import Text "mo:base/Text";
 
 actor Test {
+    // User-Agent and Accept headers are mandatory, because they are added by IC. // FIXME
     public shared func test(addHost: Bool): async Text {
         let res = await Call.callHttp({
             url = "https://localhost:8443";

@@ -9,7 +9,7 @@ use rustls::ServerConfig;
 use rustls_pemfile::{certs, pkcs8_private_keys};
 use actix_web::{http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
 use anyhow::{anyhow, Context};
-use cache::{cache::BinaryCache, mem_cache::BinaryMemCache};
+use cache::{cache::Cache, mem_cache::BinaryMemCache};
 use clap::Parser;
 use errors::{InvalidHeaderNameError, InvalidHeaderValueError, MyCorruptedDBError, MyResult};
 use reqwest::ClientBuilder;
@@ -125,11 +125,12 @@ async fn proxy(
     req: actix_web::HttpRequest,
     body: web::Bytes,
     config: Data<Config>,
-    cache: Data<Arc<tokio::sync::Mutex<&mut BinaryCache>>>,
+    cache: Data<Arc<tokio::sync::Mutex<Box<BinaryMemCache>>>>,
     state: Data<State>, 
 )
     -> MyResult<actix_web::HttpResponse>
 {
+    // info!("REQ: {:?}", &req);
     info!("Joining proxy received a request to {}", req.path());
     // First level of defence: X-JoinProxy-Key can be stolen by an IC replica owner:
     if let Some(our_secret) = &config.our_secret {
@@ -153,6 +154,7 @@ async fn proxy(
     let response = &mut if let Some(serialized_response) = (*cache_lock).inner().await
     {
         std::mem::drop(cache_lock);
+        info!("Cache hit.");
 
         let mut response = deserialize_http_response(serialized_response.as_slice())?;
         if config.response_headers.show_hit_miss {
@@ -163,6 +165,8 @@ async fn proxy(
         }
         response
     } else {
+        info!("Cache miss.");
+
         // Second level of defence: Ask back the calling canister.
         // Do it only once per outcall (our response content isn't secure anyway).
         if let (Some(agent), Some(callback)) = (&state.agent, &config.callback) {
@@ -239,7 +243,7 @@ async fn main() -> anyhow::Result<()> {
 
     let server_url = config.serve.host.clone() + ":" + config.serve.port.to_string().as_str();
 
-    let cache = Arc::new(Mutex::new(BinaryMemCache::new(config.cache.cache_timeout)));
+    let cache = Arc::new(Mutex::new(Box::new(BinaryMemCache::new(config.cache.cache_timeout))));
 
     let additional_response_headers = &config.request_headers.add;
     let additional_response_headers = additional_response_headers.into_iter().map(

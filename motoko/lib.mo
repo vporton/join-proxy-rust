@@ -107,6 +107,7 @@ module {
             }
         };
         ignore BTree.insert(subtree, Blob.compare, hash, ());
+        Debug.print(debug_show(BTree.min(checker.hashes)) # " - our hash after insert."); // TODO: Remove.
     };
 
     public func announceHttpRequest(checker: HttpRequestsChecker, request: Types.HttpRequestArgs, params: {timeout: Nat}) {
@@ -114,6 +115,8 @@ module {
     };
 
     public func checkHttpRequest(checker: HttpRequestsChecker, hash: Blob): Bool {
+        Debug.print(debug_show(BTree.min(checker.hashes)) # " - our min hash."); // TODO: Remove.
+        Debug.print(debug_show(hash) # " - asked hash."); // TODO: Remove.
         BTree.has(checker.hashes, Blob.compare, hash);
     };
 
