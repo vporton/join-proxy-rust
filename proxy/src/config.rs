@@ -112,7 +112,7 @@ where
     D: Deserializer<'de>,
 {
     let s: String = serde::Deserialize::deserialize(deserializer)?;
-    let pos = s.find(|c: char| !c.is_numeric()).unwrap_or(input.len());
+    let pos = s.find(|c: char| !c.is_numeric()).unwrap_or(s.len());
     let (value_str, unit) = s.split_at(pos);
 
     let value: u64 = value_str.parse().map_err(serde::de::Error::custom)?;
