@@ -11,8 +11,8 @@ ic_url = "http://127.0.0.1:8007" # "http://localhost:8007"
 host = "localhost"
 port = 8443
 https = true
-cert_file = "test/e2e/tmpls/basic/certs/cert.unsafe.pem"
-key_file = "test/e2e/tmpls/basic/certs/key.unsafe.pem"
+cert_file = "localhost.crt"
+key_file = "localhost.key"
 
 [cache]
 cache_timeout = "1m" # How long responses are cached. See for format: https://chatgpt.com/share/4fb8f7c9-ad48-4cfe-a875-efcb6d36bbf1
