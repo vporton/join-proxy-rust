@@ -1,4 +1,4 @@
-use std::{fs::{read_to_string, write, File}, path::{Path, PathBuf}, process::Command, time::Duration};
+use std::{env::current_dir, fs::{read_to_string, write, File}, path::{Path, PathBuf}, process::Command, time::Duration};
 
 use candid::{Decode, Encode};
 use fs_extra::{dir, file};
@@ -108,8 +108,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
     sleep(Duration::from_millis(2000)).await; // Wait till daemons start. // TODO: Reduce sleeps.
     // println!("[[[");
-    // run_successful_command(Command::new("curl").arg("-s").arg("https://localhost:8443/"))?;
+    // run_successful_command(Command::new("curl").arg("-s").arg("-v").arg("https://localhost/"))?;
     // run_successful_command(Command::new("wget").arg("--quiet").arg("-O-").arg("https://localhost:8443/"))?;
+    // run_successful_command(Command::new("cargo").args([
+    //         "run", "--example", "client", "--features=[\"full\"]", "--", "https://localhost:443/"])
+    //     .current_dir("hyper"))?;
     // println!("]]]");
     test_calls(&test).await?;
     // TODO

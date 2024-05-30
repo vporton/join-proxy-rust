@@ -15,3 +15,17 @@ serde_json = "1.0.117"
 tempdir = "0.3.7"
 tokio = { version = "1.37.0", features = ["macros"] }
 toml_edit = "0.22.13"
+
+# FIXME: Remove the below.
+
+# hyper = { version = "0.14", features = ["client", "tcp", "http2"] }
+# hyper-tls = "*"
+# log = "*"
+# env_logger = "*"
+# http-body-util = "*"
+# bytes = "*"
+# pretty_env_logger = "*"
+
+# [[bin]]
+# name = "myhyper"
+# path = "src/myhyper.rs"
