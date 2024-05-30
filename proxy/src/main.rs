@@ -130,7 +130,7 @@ async fn proxy(
 )
     -> MyResult<actix_web::HttpResponse>
 {
-    info!("REQ: {:?}", &req);
+    // info!("REQ: {:?}", &req);
     info!("Joining proxy received a request to {}", req.path());
     // First level of defence: X-JoinProxy-Key can be stolen by an IC replica owner:
     if let Some(our_secret) = &config.our_secret {
