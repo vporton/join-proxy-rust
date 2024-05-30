@@ -330,11 +330,6 @@ async fn main() -> anyhow::Result<()> {
             server.bind_rustls_0_23(
                 server_url,
                 ServerConfig::builder().with_no_client_auth()
-                    // .with_client_cert_verifier(
-                    //     rustls::server::AllowAnyAuthenticatedClient::new(Arc::new(rustls::RootCertStore {
-                    //         roots: vec![/*ca_cert*/]
-                    //     })),
-                    // )
                     .with_single_cert(cert_chain, rustls::pki_types::PrivateKeyDer::Pkcs8(key))? // TODO: correct?
             )
         } else {
