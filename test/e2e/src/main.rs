@@ -106,7 +106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _proxy = TemporaryChild::spawn(&mut Command::new(
         test.workspace_dir.join("target").join("debug").join("joining-proxy")
     ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
-    sleep(Duration::from_millis(2000)).await; // Wait till daemons start.
+    sleep(Duration::from_millis(3000)).await; // Wait till daemons start. // TODO: Reduce sleeps.
     // println!("[[[");
     // run_successful_command(Command::new("curl").arg("-s").arg("https://localhost:8443/"))?;
     // println!("]]]");

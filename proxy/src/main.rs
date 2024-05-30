@@ -2,7 +2,7 @@ mod errors;
 mod cache;
 mod config;
 
-use std::{fs::{read_to_string, File}, io::BufReader, str::{from_utf8, FromStr}, sync::Arc};
+use std::{fs::{read_to_string, File}, io::BufReader, str::{from_utf8, FromStr}, sync::Arc, time::Instant};
 
 use log::info;
 use rustls::ServerConfig;
@@ -16,7 +16,7 @@ use reqwest::ClientBuilder;
 use ic_agent::Agent;
 use candid::{Decode, Encode};
 use sha2::{Digest, Sha256};
-use tokio::sync::Mutex;
+use tokio::{sync::Mutex, time::sleep};
 use anyhow::bail;
 
 use crate::config::Config;
@@ -130,7 +130,7 @@ async fn proxy(
 )
     -> MyResult<actix_web::HttpResponse>
 {
-    // info!("REQ: {:?}", &req);
+    info!("REQ: {:?}", &req);
     info!("Joining proxy received a request to {}", req.path());
     // First level of defence: X-JoinProxy-Key can be stolen by an IC replica owner:
     if let Some(our_secret) = &config.our_secret {
@@ -170,10 +170,27 @@ async fn proxy(
         // Second level of defence: Ask back the calling canister.
         // Do it only once per outcall (our response content isn't secure anyway).
         if let (Some(agent), Some(callback)) = (&state.agent, &config.callback) {
-            let req_id = agent.update(&callback.canister, &callback.func)
-                .with_arg(Encode!(&actix_request_hash.as_slice())?).call().await?;
-            let res = agent.wait(req_id, callback.canister).await?;
-            let _ = Decode!(res.as_slice(), ())?; // check for errors
+            sleep(callback.pause_before_first_call).await;
+            // We may do several update calls, but (if so configured) only the last call is paid,
+            // thanks to message inspection.
+            let start = Instant::now();
+            loop {
+                info!("Callback...");
+                let req_id = agent.update(&callback.canister, &callback.func)
+                    .with_arg(Encode!(&actix_request_hash.as_slice())?).call().await?;
+                let res = agent.wait(req_id, callback.canister).await?;
+                match Decode!(res.as_slice(), ()) { // check for errors
+                    Ok(_) => break,
+                    Err(e) => {
+                        info!("Callback error: {e}");
+                    }, // IC trap
+                }
+                sleep(callback.pause_between_calls).await;
+                if Instant::now() > start.checked_add(callback.timing_out_calls_after).unwrap() { // TODO: In principle, this can panic.
+                    return Ok(HttpResponse::GatewayTimeout().body(""));
+                }
+            }
+            info!("Callback OK.");
         }
 
         let reqwest = prepare_request(&req, &body, &config, &state).await?;

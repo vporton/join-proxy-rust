@@ -9,6 +9,24 @@ pub struct Callback {
     #[serde(deserialize_with = "deserialize_canister_id")]
     pub canister: Principal,
     pub func: String,
+    #[serde(default="default_pause_before_first_call", deserialize_with = "parse_duration")]
+    pub pause_before_first_call: Duration,
+    #[serde(default="default_pause_between_calls", deserialize_with = "parse_duration")]
+    pub pause_between_calls: Duration,
+    #[serde(default="default_timing_out_calls_after", deserialize_with = "parse_duration")]
+    pub timing_out_calls_after: Duration,
+}
+
+fn default_pause_before_first_call() -> Duration {
+    Duration::from_millis(600)
+}
+
+fn default_pause_between_calls() -> Duration {
+    Duration::from_millis(900)
+}
+
+fn default_timing_out_calls_after() -> Duration {
+    Duration::from_secs(60)
 }
 
 // TODO: Make optional
