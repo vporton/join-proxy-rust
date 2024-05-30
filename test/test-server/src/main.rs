@@ -34,8 +34,8 @@ impl From<anyhow::Error> for MyError {
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let cert_file = &mut BufReader::new(File::open("localhost.pem").context("Can't read HTTPS cert.")?);
-    let key_file = &mut BufReader::new(File::open("localhost.key").context("Can't read HTTPS key.")?);
+    let cert_file = &mut BufReader::new(File::open("localhost.crt").context("Can't read HTTPS cert.")?);
+    let key_file = &mut BufReader::new(File::open("localhost.decrypted.key").context("Can't read HTTPS key.")?);
     let cert_chain = certs(cert_file).collect::<Result<Vec<_>, _>>()
         .context("Can't parse HTTPS certs chain.")?;
     let key = pkcs8_private_keys(key_file)

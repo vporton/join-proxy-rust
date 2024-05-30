@@ -30,7 +30,11 @@ RUN openssl x509 -passin pass: -req -in localhost.csr \
                   -CA CA.pem -CAkey CA.key \
                   -CAcreateserial -sha256 \
                   -extfile localhost.ext -out localhost.crt
-RUN openssl rsa -passin pass:  -in localhost.key -out localhost.decrypted.key
+RUN openssl rsa -passin pass: -in localhost.key -out localhost.decrypted.key
+RUN mkdir -p test/e2e/tmpl/
+RUN cp localhost.crt localhost.decrypted.key test/e2e/tmpl/
+RUN cp localhost.crt /usr/local/share/ca-certificates
+RUN update-ca-certificates
 
 COPY motoko/ ./motoko/
 COPY proxy/ ./proxy/

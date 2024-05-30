@@ -20,6 +20,7 @@ toml_edit = "0.22.13"
 
 # hyper = { version = "0.14", features = ["client", "tcp", "http2"] }
 # hyper-tls = "*"
+# hyper-rustls = "*"
 # log = "*"
 # env_logger = "*"
 # http-body-util = "*"
