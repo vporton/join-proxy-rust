@@ -8,7 +8,6 @@ ENV PATH=$HOME/.local/share/dfx/bin:$PATH
 RUN $HOME/.local/share/dfx/bin/dfxvm default 0.20.0
 
 RUN apt-get update
-#RUN apt-get install -y ca-certificates
 RUN apt-get install -y openssl npm libunwind8
 
 RUN npm i -g ic-mops
@@ -37,4 +36,4 @@ COPY mops.toml .
 # --debug to speed up compilation
 RUN cargo build
 
-CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=info && ./target/debug/e2e"
+CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=info,hyper=debug && ./target/debug/e2e"
