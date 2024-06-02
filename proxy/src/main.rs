@@ -178,9 +178,14 @@ async fn proxy(
                 info!("Callback...");
                 let req_id = agent.update(&callback.canister, &callback.func)
                     .with_arg(Encode!(&actix_request_hash.as_slice())?).call().await?;
-                let res = agent.wait(req_id, callback.canister).await?;
-                match Decode!(res.as_slice(), ()) { // check for errors
-                    Ok(_) => break,
+                let res = agent.wait(req_id, callback.canister).await;
+                match res {
+                    Ok(res) => match Decode!(res.as_slice(), ()) { // check for errors
+                        Ok(_) => break,
+                        Err(e) => {
+                            info!("Callback error: {e}");
+                        }, // IC trap
+                    }
                     Err(e) => {
                         info!("Callback error: {e}");
                     }, // IC trap
