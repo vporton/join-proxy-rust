@@ -174,13 +174,13 @@ async fn proxy(
             // We may do several update calls, but (if so configured) only the last call is paid,
             // thanks to message inspection.
             let start = Instant::now();
+            info!("Callback...");
             loop {
-                info!("Callback...");
                 let req_id = agent.update(&callback.canister, &callback.func)
                     .with_arg(Encode!(&actix_request_hash.as_slice())?).call().await;
                 match req_id {
                     Err(e) => {
-                        info!("Callback request error: {e}"); // IC trap
+                        info!("Callback request error: {e}"); // IC trap here!
                     }
                     Ok(req_id) => {
                         let res = agent.wait(req_id, callback.canister).await;

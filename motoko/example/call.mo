@@ -3,6 +3,7 @@ import Types "../HttpTypes";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
 import Cycles "mo:base/ExperimentalCycles";
+import Nat8 "mo:base/Nat8";
 
 actor HttpCaller {
     stable let requestsChecker = Http.newHttpRequestsChecker();
@@ -16,8 +17,8 @@ actor HttpCaller {
 
     /// This function is needed even, if you use `inspect`, because
     /// `inspect` is basically a query call and query calls can be forged by a malicious replica.
-    public shared func checkRequest(hash: Blob): async () {
-        if (not Http.checkHttpRequest(requestsChecker, hash)) {
+    public shared func checkRequest(hash: [Nat8]): async () {
+        if (not Http.checkHttpRequest(requestsChecker, Blob.fromArray(hash))) {
             Debug.trap("hacked HTTP request");
         }
     };
@@ -25,7 +26,7 @@ actor HttpCaller {
     system func inspect({
         // caller : Principal;
         // arg : Blob;
-        msg : {#callHttp : () -> (Types.HttpRequestArgs, Nat); #checkRequest : () -> Blob}
+        msg : {#callHttp : () -> (Types.HttpRequestArgs, Nat); #checkRequest : () -> [Nat8]}
     }) : Bool {
         switch (msg) {
             case (#checkRequest hash) {

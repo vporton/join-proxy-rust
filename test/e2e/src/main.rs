@@ -17,7 +17,6 @@ struct Test {
     workspace_dir: PathBuf,
     agent: Agent,
     call_canister_id: Principal,
-    test_canister_id: Principal,
     _dfx_daemon: TemporaryChild,
 }
 
@@ -57,7 +56,6 @@ impl Test {
             serde_json::from_reader(file).expect("Error parsing JSON")
         };
         let call_canister_id = canister_ids.as_object().unwrap()["call"].as_object().unwrap()["local"].as_str().unwrap();
-        let test_canister_id = canister_ids.as_object().unwrap()["test"].as_object().unwrap()["local"].as_str().unwrap();
 
         println!("Connecting to DFX (port {port})");
         let res = Self {
@@ -65,8 +63,6 @@ impl Test {
             _dfx_daemon: dfx_daemon,
             agent: Agent::builder().with_url(format!("http://127.0.0.1:{port}")).build().context("Creating Agent")?,
             call_canister_id: Principal::from_text(call_canister_id)
-                .context("Parsing principal")?,
-            test_canister_id: Principal::from_text(test_canister_id)
                 .context("Parsing principal")?,
             // cargo_manifest_dir: cargo_manifest_dir.to_path_buf(),
             workspace_dir: workspace_dir,
@@ -86,7 +82,7 @@ impl Test {
 async fn test_calls(test: &Test) -> Result<(), Box<dyn std::error::Error>> {
     for add_host in [false, true] {
         let res =
-            test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&add_host).unwrap())
+            test.agent.update(&test.call_canister_id, "checkRequest").with_arg(Encode!(&add_host).unwrap())
                 .call_and_wait().await.context("Call to IC.")?;
         assert_eq!(Decode!(&res, String).context("Decoding test call response.")?, "Test");
         // TODO: Check two parallel requests.
@@ -107,11 +103,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         test.workspace_dir.join("target").join("debug").join("joining-proxy")
     ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
     sleep(Duration::from_millis(4000)).await; // Wait till daemons start. // TODO: Reduce sleeps.
-    println!("CURL");
-    run_successful_command(Command::new("curl").args(["-s", "--ipv6", "-v", "https://ip6-localhost:8443/"]))?;
+    // println!("CURL");
+    // run_successful_command(Command::new("curl").args(["-s", "--ipv6", "-v", "https://ip6-localhost:8443/"]))?;
     // println!("WGET");
     // run_successful_command(Command::new("wget").arg("-6").arg("-v").arg("https://localhost:8443/"))?;
-    println!("END");
+    // println!("END");
     test_calls(&test).await?;
     // TODO
     Ok(())

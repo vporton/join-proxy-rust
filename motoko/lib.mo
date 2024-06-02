@@ -122,6 +122,7 @@ module {
 
     public func checkedHttpRequest(checker: HttpRequestsChecker, request: Types.HttpRequestArgs, params: {timeout: Nat}): async* Types.HttpResponsePayload {
         announceHttpRequest(checker, request, params);
+        Debug.print(debug_show(BTree.min(checker.hashes)) # " - our min hash 2."); // TODO: Remove.
         await Types.ic.http_request(request);
     };
 };
