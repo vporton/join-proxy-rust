@@ -23,9 +23,9 @@ COPY test/e2e/localhost.ext .
 # RUN mkdir -p test/e2e/tmpl/
 # RUN cp localhost.pem localhost.key test/e2e/tmpl/
 RUN openssl genrsa -passout pass: -out CA.key -des3 2048
-RUN openssl req -passin pass: -x509 -sha256 -new -nodes -key CA.key -out CA.pem -subj '/CN=localhost/O=My Company Name LTD./C=US'
+RUN openssl req -passin pass: -x509 -sha256 -new -nodes -key CA.key -out CA.pem -subj '/CN=ip6-localhost/O=My Company Name LTD./C=US'
 RUN openssl genrsa -passout pass: -out localhost.key -des3 2048
-RUN openssl req -passin pass: -new -key localhost.key -out localhost.csr -subj '/CN=localhost/O=My Company Name LTD./C=US'
+RUN openssl req -passin pass: -new -key localhost.key -out localhost.csr -subj '/CN=ip6-localhost/O=My Company Name LTD./C=US'
 RUN openssl x509 -passin pass: -req -in localhost.csr \
                   -CA CA.pem -CAkey CA.key \
                   -CAcreateserial -sha256 \

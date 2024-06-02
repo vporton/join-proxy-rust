@@ -96,14 +96,6 @@ async fn test_calls(test: &Test) -> Result<(), Box<dyn std::error::Error>> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    run_successful_command(Command::new("sh").args(["-c", "sed -i 's@^::1\\s@::1 localhost@ ' /etc/hosts"]))
-        .context("Modifying /etc/hosts")?;
-
-    println!("[[");
-    run_successful_command(Command::new("sh").args(["cat", "/etc/hosts"]))
-        .context("Showing /etc/hosts")?;
-    println!("]]");
-
     let cargo_manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let tmpl_dir = cargo_manifest_dir.join("tmpl");
 
@@ -115,11 +107,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         test.workspace_dir.join("target").join("debug").join("joining-proxy")
     ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
     sleep(Duration::from_millis(4000)).await; // Wait till daemons start. // TODO: Reduce sleeps.
-    // println!("CURL");
-    // run_successful_command(Command::new("curl").arg("-s").arg("--ipv6").arg("-v").arg("https://localhost:8443/"))?;
+    println!("CURL");
+    run_successful_command(Command::new("curl").args(["-s", "--ipv6", "-v", "-H", "localhost:8081", "https://localhost:8443/"]))?;
     // println!("WGET");
     // run_successful_command(Command::new("wget").arg("-6").arg("-v").arg("https://localhost:8443/"))?;
-    // println!("END");
+    println!("END");
     test_calls(&test).await?;
     // TODO
     Ok(())
