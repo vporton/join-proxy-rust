@@ -16,6 +16,7 @@ struct Test {
     // cargo_manifest_dir: PathBuf,
     workspace_dir: PathBuf,
     agent: Agent,
+    test_canister_id: Principal,
     call_canister_id: Principal,
     _dfx_daemon: TemporaryChild,
 }
@@ -55,6 +56,7 @@ impl Test {
             let file = File::open(path).with_context(|| format!("Opening canister_ids.json"))?;
             serde_json::from_reader(file).expect("Error parsing JSON")
         };
+        let test_canister_id = canister_ids.as_object().unwrap()["test"].as_object().unwrap()["local"].as_str().unwrap();
         let call_canister_id = canister_ids.as_object().unwrap()["call"].as_object().unwrap()["local"].as_str().unwrap();
 
         println!("Connecting to DFX (port {port})");
@@ -62,6 +64,8 @@ impl Test {
             dir,
             _dfx_daemon: dfx_daemon,
             agent: Agent::builder().with_url(format!("http://127.0.0.1:{port}")).build().context("Creating Agent")?,
+            test_canister_id: Principal::from_text(test_canister_id)
+                .context("Parsing principal")?,
             call_canister_id: Principal::from_text(call_canister_id)
                 .context("Parsing principal")?,
             // cargo_manifest_dir: cargo_manifest_dir.to_path_buf(),
@@ -82,7 +86,7 @@ impl Test {
 async fn test_calls(test: &Test) -> Result<(), Box<dyn std::error::Error>> {
     for add_host in [false, true] {
         let res =
-            test.agent.update(&test.call_canister_id, "checkRequest").with_arg(Encode!(&add_host).unwrap())
+            test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&add_host).unwrap())
                 .call_and_wait().await.context("Call to IC.")?;
         assert_eq!(Decode!(&res, String).context("Decoding test call response.")?, "Test");
         // TODO: Check two parallel requests.

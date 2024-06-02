@@ -14,8 +14,7 @@ use clap::Parser;
 use errors::{InvalidHeaderNameError, InvalidHeaderValueError, MyCorruptedDBError, MyResult};
 use reqwest::ClientBuilder;
 use ic_agent::Agent;
-use candid::{CandidType, Decode, Encode, IDLValue};
-use serde::Deserialize;
+use candid::{Decode, Encode};
 use sha2::{Digest, Sha256};
 use tokio::{sync::Mutex, time::sleep};
 use anyhow::bail;
@@ -177,12 +176,8 @@ async fn proxy(
             let start = Instant::now();
             info!("Callback...");
             loop {
-                #[derive(CandidType, Deserialize)]
-                struct Arg<'a> {
-                    request_hash: &'a [u8],
-                }
                 let req_id = agent.update(&callback.canister, &callback.func)
-                    .with_arg(Encode!(&Arg { request_hash: actix_request_hash.as_slice() })?).call().await; // TODO: call_and_wait()
+                    .with_arg(Encode!(&(actix_request_hash.as_slice(),))?).call().await; // TODO: call_and_wait()
                 match req_id {
                     Err(e) => {
                         info!("Callback request error: {e}"); // IC trap here!
