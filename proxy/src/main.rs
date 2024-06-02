@@ -195,12 +195,15 @@ async fn proxy(
                                 Ok(_) => break,
                             }
                         }
-                        sleep(callback.pause_between_calls).await;
-                        if Instant::now() > start.checked_add(callback.timing_out_calls_after).unwrap() { // TODO: In principle, this can panic.
+                        info!("now()={:?}, start={:?}, timing_out_calls_after={:?}, sum={:?}", Instant::now(), start, callback.timing_out_calls_after, start.checked_add(callback.timing_out_calls_after));
+                        if Instant::now().gt(&start.checked_add(callback.timing_out_calls_after).unwrap()) { // TODO: In principle, this can panic.
+                            info!("Callback timeout");
                             return Ok(HttpResponse::GatewayTimeout().body(""));
                         }
                     }
                 }
+                info!("PAUSE"); // FIXME: Remove.
+                sleep(callback.pause_between_calls).await;
             }
             info!("Callback OK.");
         }
