@@ -23,9 +23,9 @@ COPY test/e2e/localhost.ext .
 # RUN mkdir -p test/e2e/tmpl/
 # RUN cp localhost.pem localhost.key test/e2e/tmpl/
 RUN openssl genrsa -passout pass: -out CA.key -des3 2048
-RUN openssl req -passin pass: -x509 -sha256 -new -nodes -key CA.key -out CA.pem -subj '/CN=ip6-localhost/O=My Company Name LTD./C=US'
+RUN openssl req -passin pass: -x509 -sha256 -new -nodes -key CA.key -out CA.pem -subj '/CN=local.vporton.name/O=My Company Name LTD./C=US'
 RUN openssl genrsa -passout pass: -out localhost.key -des3 2048
-RUN openssl req -passin pass: -new -key localhost.key -out localhost.csr -subj '/CN=ip6-localhost/O=My Company Name LTD./C=US'
+RUN openssl req -passin pass: -new -key localhost.key -out localhost.csr -subj '/CN=local.vporton.name/O=My Company Name LTD./C=US'
 RUN openssl x509 -passin pass: -req -in localhost.csr \
                   -CA CA.pem -CAkey CA.key \
                   -CAcreateserial -sha256 \
@@ -44,8 +44,9 @@ COPY Cargo.toml .
 COPY dfx.json .
 COPY mops.toml .
 
-# FIXME: This is for testing:
-# --debug to speed up compilation
 RUN cargo build
 
-CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=info && ./target/debug/e2e"
+# RUN apt install -y bind9-host
+# CMD sh -c "cat /etc/resolv.conf && echo --- && host local.vporton.name"
+
+CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=info,hyper=debug && ./target/debug/e2e"
