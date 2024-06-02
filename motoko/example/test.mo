@@ -8,7 +8,7 @@ actor Test {
     // User-Agent and Accept headers are mandatory, because they are added by IC. // FIXME
     public shared func test(addHost: Bool): async Text {
         let res = await Call.callHttp({
-            url = "https://localhost:8443";
+            url = "https://[::1]:8443";
             max_response_bytes = ?10_000;
             headers = if (addHost) [
                 {name = "Host"; value="localhost:8081"},
