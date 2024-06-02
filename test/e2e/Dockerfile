@@ -58,4 +58,4 @@ RUN cargo build
 
 # RUN sh -c "echo ::1 localhost >> /etc/hosts"
 
-CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=debug && ./target/debug/e2e"
+CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH && ./target/debug/e2e"
