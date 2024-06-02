@@ -96,6 +96,14 @@ async fn test_calls(test: &Test) -> Result<(), Box<dyn std::error::Error>> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    run_successful_command(Command::new("sh").args(["-c", "sed -i 's@^::1\\s@::1 localhost@ ' /etc/hosts"]))
+        .context("Modifying /etc/hosts")?;
+
+    println!("[[");
+    run_successful_command(Command::new("sh").args(["cat", "/etc/hosts"]))
+        .context("Showing /etc/hosts")?;
+    println!("]]");
+
     let cargo_manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let tmpl_dir = cargo_manifest_dir.join("tmpl");
 
