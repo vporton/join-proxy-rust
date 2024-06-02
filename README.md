@@ -85,6 +85,14 @@ show_hit_miss = false # true by default. Add `X-JoinProxy-Response: [Hit | Miss]
 add_forwarded_from_header = false # Add `X-Forwarded-From` useless but widespread HTTP header to the response
 ```
 
+## Testing
+
+For a E2E test, run:
+```
+docker buildx build -t test -f test/e2e/Dockerfile .
+docker run test
+```
+
 ## IC Code
 
 For examples of IC code compatible with this proxy, see `motoko/example/` directory.
