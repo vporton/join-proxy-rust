@@ -177,22 +177,29 @@ async fn proxy(
             loop {
                 info!("Callback...");
                 let req_id = agent.update(&callback.canister, &callback.func)
-                    .with_arg(Encode!(&actix_request_hash.as_slice())?).call().await?;
-                let res = agent.wait(req_id, callback.canister).await;
-                match res {
-                    Ok(res) => match Decode!(res.as_slice(), ()) { // check for errors
-                        Ok(_) => break,
-                        Err(e) => {
-                            info!("Callback error: {e}");
-                        }, // IC trap
-                    }
+                    .with_arg(Encode!(&actix_request_hash.as_slice())?).call().await;
+                match req_id {
                     Err(e) => {
-                        info!("Callback error: {e}");
-                    }, // IC trap
-                }
-                sleep(callback.pause_between_calls).await;
-                if Instant::now() > start.checked_add(callback.timing_out_calls_after).unwrap() { // TODO: In principle, this can panic.
-                    return Ok(HttpResponse::GatewayTimeout().body(""));
+                        info!("Callback request error: {e}"); // IC trap
+                    }
+                    Ok(req_id) => {
+                        let res = agent.wait(req_id, callback.canister).await;
+                        match res {
+                            Err(e) => {
+                                info!("Callback result error: {e}");
+                            }
+                            Ok(res) => match Decode!(res.as_slice(), ()) { // check for errors
+                                Err(e) => {
+                                    info!("Callback decode error: {e}"); // IC trap
+                                }
+                                Ok(_) => break,
+                            }
+                        }
+                        sleep(callback.pause_between_calls).await;
+                        if Instant::now() > start.checked_add(callback.timing_out_calls_after).unwrap() { // TODO: In principle, this can panic.
+                            return Ok(HttpResponse::GatewayTimeout().body(""));
+                        }
+                    }
                 }
             }
             info!("Callback OK.");
