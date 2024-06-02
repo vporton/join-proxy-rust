@@ -177,7 +177,7 @@ async fn proxy(
             info!("Callback...");
             loop {
                 let req_id = agent.update(&callback.canister, &callback.func)
-                    .with_arg(Encode!(&actix_request_hash.as_slice())?).call().await;
+                    .with_arg(Encode!(&(actix_request_hash.as_slice(),))?).call().await;
                 match req_id {
                     Err(e) => {
                         info!("Callback request error: {e}"); // IC trap here!
