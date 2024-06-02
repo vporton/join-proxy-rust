@@ -19,7 +19,7 @@ actor Test {
             body = null;
             method = #get;
             transform = null;
-        }, 12_000_000);
+        }, 9_000_000_000_000); // TODO: much too much
         let ?body = Text.decodeUtf8(Blob.fromArray(res.body)) else {
             Debug.trap("No response body.")
         };

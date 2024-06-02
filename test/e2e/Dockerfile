@@ -45,17 +45,7 @@ COPY dfx.json .
 COPY mops.toml .
 
 # FIXME: This is for testing:
-# RUN git clone https://github.com/vporton/ic.git
-# WORKDIR /usr/src/myapp/ic
-# RUN git checkout env_logger
-# RUN apt-get install -y protobuf-compiler libunwind-dev llvm liblmdb-dev librocksdb-dev
-# RUN cargo build -p ic-replica
-# RUN cp target/debug/replica $HOME/.local/share/dfx/bin
-# WORKDIR /usr/src/myapp
-
 # --debug to speed up compilation
 RUN cargo build
-
-# RUN sh -c "echo ::1 localhost >> /etc/hosts"
 
 CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=info && ./target/debug/e2e"

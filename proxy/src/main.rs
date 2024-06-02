@@ -176,33 +176,25 @@ async fn proxy(
             let start = Instant::now();
             info!("Callback...");
             loop {
-                let req_id = agent.update(&callback.canister, &callback.func)
-                    .with_arg(Encode!(&(actix_request_hash.as_slice(),))?).call().await; // TODO: call_and_wait()
-                match req_id {
+                let res = agent.update(&callback.canister, &callback.func)
+                    .with_arg(Encode!(&(actix_request_hash.as_slice(),))?).call_and_wait().await; // TODO: call_and_wait()
+                match res {
                     Err(e) => {
-                        info!("Callback request error: {e}"); // IC trap here!
+                        info!("Callback result error: {e}");
                     }
-                    Ok(req_id) => {
-                        let res = agent.wait(req_id, callback.canister).await;
-                        match res {
-                            Err(e) => {
-                                info!("Callback result error: {e}");
-                            }
-                            Ok(res) => match Decode!(res.as_slice(), ()) { // check for errors
-                                Err(e) => {
-                                    info!("Callback decode error: {e}"); // IC trap
-                                }
-                                Ok(_) => break,
-                            }
+                    Ok(res) => match Decode!(res.as_slice(), ()) { // check for errors
+                        Err(e) => {
+                            info!("Callback decode error: {e}"); // IC trap
                         }
-                        info!("now()={:?}, start={:?}, timing_out_calls_after={:?}, sum={:?}", Instant::now(), start, callback.timing_out_calls_after, start.checked_add(callback.timing_out_calls_after));
-                        if Instant::now().gt(&start.checked_add(callback.timing_out_calls_after).unwrap()) { // TODO: In principle, this can panic.
-                            info!("Callback timeout");
-                            return Ok(HttpResponse::GatewayTimeout().body(""));
-                        }
+                        Ok(_) => break,
                     }
                 }
+                info!("now()={:?}, start={:?}, timing_out_calls_after={:?}, sum={:?}", Instant::now(), start, callback.timing_out_calls_after, start.checked_add(callback.timing_out_calls_after));
                 info!("PAUSE"); // FIXME: Remove.
+                if Instant::now().gt(&start.checked_add(callback.timing_out_calls_after).unwrap()) { // TODO: In principle, this can panic.
+                    info!("Callback timeout");
+                    return Ok(HttpResponse::GatewayTimeout().body(""));
+                }
                 sleep(callback.pause_between_calls).await;
             }
             info!("Callback OK.");
