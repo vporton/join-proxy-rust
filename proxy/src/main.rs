@@ -258,7 +258,8 @@ async fn main() -> anyhow::Result<()> {
         config.ic_url = Some("http://localhost:8000".to_string())
     }
 
-    let server_url = config.serve.host.clone() + ":" + config.serve.port.to_string().as_str();
+    // FIXME: "localhost:8081" binds only IPv4, in some reason.
+    let server_url = "[::1]".to_string()/*config.serve.host.clone()*/ + ":" + config.serve.port.to_string().as_str();
 
     let cache = Arc::new(Mutex::new(Box::new(BinaryMemCache::new(config.cache.cache_timeout))));
 
@@ -319,6 +320,7 @@ async fn main() -> anyhow::Result<()> {
                 .route("/{_:.*}", web::route().to(proxy))
         )
     });
+    info!("Starting Proxy at {} (https={})", server_url, is_https);
     if is_https {
         if let (Some(cert_file), Some(key_file)) = (cert_file, key_file) {
             let cert_file = &mut BufReader::new(File::open(cert_file).context("Can't read HTTPS cert.")?);

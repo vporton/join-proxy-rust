@@ -14,6 +14,9 @@
     "build": {
       "args": "",
       "packtool": "mops sources"
+    },
+    "canister_http": {
+      "log_level": "trace"
     }
   },
   "networks": {

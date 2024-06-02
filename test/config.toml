@@ -9,7 +9,7 @@ ic_url = "http://127.0.0.1:8007" # "http://localhost:8007"
 
 [serve]
 host = "localhost"
-port = 443
+port = 8443
 https = true
 cert_file = "localhost.crt"
 key_file = "localhost.key"

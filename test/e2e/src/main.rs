@@ -40,7 +40,7 @@ impl Test {
         ).args(["start", "--host", "127.0.0.1:8007"]).current_dir(dir.path()), Capture { stdout: None, stderr: None })
             .context("Starting DFX")?;
         sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
-        run_successful_command(Command::new("mops").arg("install").current_dir(dir.path()))
+        run_successful_command(Command::new("mops").arg("install").arg("--verbose").current_dir(dir.path()))
             .context("Installing MOPS packages.")?;
         run_successful_command(Command::new("dfx").arg("deploy").current_dir(dir.path()))
             .context("Deploying.")?;
@@ -106,13 +106,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _proxy = TemporaryChild::spawn(&mut Command::new(
         test.workspace_dir.join("target").join("debug").join("joining-proxy")
     ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
-    sleep(Duration::from_millis(2000)).await; // Wait till daemons start. // TODO: Reduce sleeps.
-    println!("[[[");
-    run_successful_command(Command::new("curl").arg("-s").arg("-v").arg("https://localhost/"))?;
-    run_successful_command(Command::new("wget").arg("--quiet").arg("-O-").arg("https://localhost:8443/"))?;
-    // run_successful_command(Command::new("./target/debug/myhyper").args(["https://localhost"]))
-    //     .context("Test downloader.")?;
-    println!("]]]");
+    sleep(Duration::from_millis(4000)).await; // Wait till daemons start. // TODO: Reduce sleeps.
+    // println!("CURL");
+    // run_successful_command(Command::new("curl").arg("-s").arg("--ipv6").arg("-v").arg("https://localhost:8443/"))?;
+    // println!("WGET");
+    // run_successful_command(Command::new("wget").arg("-6").arg("-v").arg("https://localhost:8443/"))?;
+    // println!("END");
     test_calls(&test).await?;
     // TODO
     Ok(())

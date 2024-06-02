@@ -2,6 +2,9 @@ FROM rust:1.78
 
 WORKDIR /usr/src/myapp
 
+# FIXME: Hack!
+COPY test/e2e/resolv.conf /etc/resolv.conf
+
 ENV DFXVM_INIT_YES=true
 RUN curl -fsSL https://internetcomputer.org/install.sh | sh
 ENV PATH=$HOME/.local/share/dfx/bin:$PATH
@@ -56,4 +59,4 @@ COPY mops.toml .
 # --debug to speed up compilation
 RUN cargo build
 
-CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=info,hyper=debug && ./target/debug/e2e"
+CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=debug && ./target/debug/e2e"
