@@ -11,10 +11,14 @@ actor Test {
             url = "https://local.vporton.name:8443";
             max_response_bytes = ?10_000;
             headers = if (addHost) [
-                {name = "Host"; value="local.vporton.name:8081"},
-                {name = "Content-Type"; value="text/plain"},
+                {name = "Host"; value = "local.vporton.name:8081"}, // overrides the default
+                {name = "Content-Type"; value = "text/plain"},
+                {name = "User-Agent"; value = "my-agent" }, // mandatory header
+                {name = "Accept"; value = "*/*" }, // mandatory header
             ] else [
-                {name = "Content-Type"; value="text/plain"},
+                {name = "Content-Type"; value = "text/plain"},
+                {name = "User-Agent"; value = "my-agent" }, // mandatory header
+                {name = "Accept"; value = "*/*" }, // mandatory header
             ];
             body = null;
             method = #get;

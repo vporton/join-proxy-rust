@@ -143,6 +143,7 @@ async fn proxy(
         }
     }
 
+    println!("XXX: {:?}", req.headers());
     let serialized_request = serialize_http_request(&req, &body)?;
     let actix_request_hash = Sha256::digest(serialized_request.as_slice());
 
