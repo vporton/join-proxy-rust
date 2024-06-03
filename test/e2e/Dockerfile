@@ -16,7 +16,6 @@ COPY test/e2e/localhost.ext .
 
 # Generate CA key
 RUN openssl genrsa -out CA.key 2048
-
 # Generate CA certificate
 RUN openssl req -x509 -sha256 -new -nodes -key CA.key -out CA.pem -subj '/CN=local.vporton.name/O=My Company Name LTD./C=US'
 # Generate localhost key
