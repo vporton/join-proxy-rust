@@ -14,26 +14,31 @@ RUN npm i -g ic-mops
 
 COPY test/e2e/localhost.ext .
 
-# RUN openssl req -x509 -out localhost.crt -keyout localhost.key \
-#   -newkey rsa:2048 -nodes -sha256 \
-#   -subj '/CN=localhost'
-# RUN openssl x509 -in localhost.crt -out localhost.pem -outform PEM
-# RUN cp -a localhost.crt /usr/local/share/ca-certificates
-# RUN update-ca-certificates
-# RUN mkdir -p test/e2e/tmpl/
-# RUN cp localhost.pem localhost.key test/e2e/tmpl/
-RUN openssl genrsa -passout pass: -out CA.key -des3 2048
-RUN openssl req -passin pass: -x509 -sha256 -new -nodes -key CA.key -out CA.pem -subj '/CN=local.vporton.name/O=My Company Name LTD./C=US'
-RUN openssl genrsa -passout pass: -out localhost.key -des3 2048
-RUN openssl req -passin pass: -new -key localhost.key -out localhost.csr -subj '/CN=local.vporton.name/O=My Company Name LTD./C=US'
-RUN openssl x509 -passin pass: -req -in localhost.csr \
+# Generate CA key
+RUN openssl genrsa -out CA.key 2048
+
+# Generate CA certificate
+RUN openssl req -x509 -sha256 -new -nodes -key CA.key -out CA.pem -subj '/CN=local.vporton.name/O=My Company Name LTD./C=US'
+# Generate localhost key
+RUN openssl genrsa -out localhost.key 2048
+# Generate localhost CSR
+RUN openssl req -new -key localhost.key -out localhost.csr -subj '/CN=local.vporton.name/O=My Company Name LTD./C=US'
+# Create a localhost.ext file for x509 extension if it does not exist
+# RUN echo "subjectAltName = DNS:local.vporton.name" > localhost.ext
+# Generate localhost certificate signed by CA
+RUN openssl x509 -req -in localhost.csr \
                   -CA CA.pem -CAkey CA.key \
                   -CAcreateserial -sha256 \
                   -extfile localhost.ext -out localhost.crt
-RUN openssl rsa -passin pass: -in localhost.key -out localhost.decrypted.key
+# Decrypt localhost key (remove passphrase)
+RUN openssl rsa -in localhost.key -out localhost.decrypted.key
+# Create directory for test certificates
 RUN mkdir -p test/e2e/tmpl/
+# Copy generated certificates to the test directory
 RUN cp localhost.crt localhost.decrypted.key test/e2e/tmpl/
-RUN cp localhost.crt /usr/local/share/ca-certificates
+# Copy localhost certificate to the system CA store
+RUN cp CA.pem /usr/local/share/ca-certificates/localhost.crt
+# Update CA certificates
 RUN update-ca-certificates
 
 COPY motoko/ ./motoko/
