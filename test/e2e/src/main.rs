@@ -113,7 +113,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // println!("WGET");
     // run_successful_command(Command::new("wget").arg("-6").arg("-v").arg("https://localhost:8443/"))?;
     // println!("END");
-    test_calls(&test).await?;
+    println!("MYHYPER");
+    run_successful_command(
+        &mut Command::new(test.workspace_dir.join("target").join("debug").join("myhyper")))?;
+    println!("END");
+    // test_calls(&test).await?;
     // TODO
     Ok(())
 }
