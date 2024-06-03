@@ -177,7 +177,7 @@ async fn proxy(
             info!("Callback...");
             loop {
                 let res = agent.update(&callback.canister, &callback.func)
-                    .with_arg(Encode!(&(actix_request_hash.as_slice(),))?).call_and_wait().await; // TODO: call_and_wait()
+                    .with_arg(Encode!(&actix_request_hash.as_slice())?).call_and_wait().await; // TODO: call_and_wait()
                 match res {
                     Err(e) => {
                         info!("Callback result error: {e}");
@@ -189,8 +189,6 @@ async fn proxy(
                         Ok(_) => break,
                     }
                 }
-                info!("now()={:?}, start={:?}, timing_out_calls_after={:?}, sum={:?}", Instant::now(), start, callback.timing_out_calls_after, start.checked_add(callback.timing_out_calls_after));
-                info!("PAUSE"); // FIXME: Remove.
                 if Instant::now().gt(&start.checked_add(callback.timing_out_calls_after).unwrap()) { // TODO: In principle, this can panic.
                     info!("Callback timeout");
                     return Ok(HttpResponse::GatewayTimeout().body(""));

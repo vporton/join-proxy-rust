@@ -52,4 +52,4 @@ RUN cargo build
 
 RUN apt install -y strace
 
-CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=info,hyper=debug && ./target/debug/e2e"
+CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=info && ./target/debug/e2e"
