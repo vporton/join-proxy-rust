@@ -46,7 +46,6 @@ COPY mops.toml .
 
 RUN cargo build
 
-# RUN apt install -y bind9-host
-# CMD sh -c "cat /etc/resolv.conf && echo --- && host local.vporton.name"
+RUN apt install -y strace
 
 CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=info,hyper=debug && ./target/debug/e2e"

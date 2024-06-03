@@ -3,5 +3,5 @@
 resolver = "2"
 
 members = [
-    "proxy", "test/e2e", "test/test-server",
+    "proxy", "test/e2e", "test/test-server", "test/myhyper"
 ]

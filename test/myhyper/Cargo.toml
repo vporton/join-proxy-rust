@@ -1,0 +1,13 @@
+[package]
+name = "myhyper"
+edition = "2021"
+
+[dependencies]
+hyper = { version = "0.14.26", features = ["full"] }
+hyper-socks2 = "0.6.0"
+hyper-tls = "0.5.0"
+# native-tls = { version = "0.2.7", features = ["alpn"] }
+http = "0.2.9"
+hyper-rustls = "0.24.0" # FIXME
+# rustls = "0.21.1"
+tokio = "1.29.1"
