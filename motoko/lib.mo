@@ -45,9 +45,10 @@ module {
             case (?s) s;
             case null "";
         };
-        let the_rest = Itertools.take(request.url.chars(), 8); // strip "https://"
-        let url = Itertools.skipWhile<Char>(the_rest, func (c: Char) { c != '/' });
-        let header_part = method # "\n" # Text.fromIter(url) # "\n" # headers_joined2;
+        let the_rest = Itertools.skip(request.url.chars(), 8); // strip "https://"
+        let url = Text.fromIter(Itertools.skipWhile<Char>(the_rest, func (c: Char) { c != '/' }));
+        Debug.print("URL[" # url # "]");
+        let header_part = method # "\n" # url # "\n" # headers_joined2;
 
         let result = Buffer.Buffer<Nat8>(header_part.size() + 1 + request.body.size());
         result.append(Buffer.fromArray(Blob.toArray(Text.encodeUtf8(header_part))));
@@ -59,7 +60,15 @@ module {
     public func hashOfHttpRequest(request: HttpRequest): Blob {
         // TODO: space inefficient
         let blob = serializeHttpRequest(request);
-        Debug.print("MOTOKO: " # debug_show(Text.decodeUtf8(blob))); // FIXME: Remove.
+        // FIXME: Remove.
+        Debug.print("MOTOKO: " # Text.translate(Option.unwrap(Text.decodeUtf8(blob)), func(c) {
+            switch (c) {
+                case '\t' "\\t";
+                case '\n' "\\n";
+                case '\r' "\\r";
+                case _ Text.fromChar(c);
+            }
+        }));
         Sha256.fromBlob(#sha256, blob);
     };
 
@@ -136,7 +145,11 @@ module {
 
     func headersToLowercase(headers: HttpHeaders) {
         for (entry in headers.entries()) {
-            headers.put(Text.toLowercase(entry.0), entry.1);
+            let lower = Text.toLowercase(entry.0);
+            if (lower != entry.0) { // speed optimization
+                headers.delete(entry.0);
+                headers.put(lower, entry.1);
+            }
         }
     };
 
@@ -153,7 +166,7 @@ module {
             headers.put("accept", ["*/*"]);
         };
         if (Option.isNull(headers.get("host"))) {
-            let the_rest = Itertools.take(request.url.chars(), 8); // strip "https://"
+            let the_rest = Itertools.skip(request.url.chars(), 8); // strip "https://"
             // We don't worry if request.url really starts with "https://" because it will be caught later.
             let host = Itertools.takeWhile<Char>(the_rest, func (c: Char) { c != '/' });
             headers.put("host", [Text.fromIter(host)]);
