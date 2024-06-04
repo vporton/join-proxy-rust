@@ -186,6 +186,34 @@ module {
         });
     };
 
+    public type WrappedHttpRequest = {
+        method: HttpMethod;
+        headers: RBTree.Tree<Text, [Text]>;
+        url: Text;
+        body: Blob;
+    };
+
+    public func checkedHttpRequestWrapped(
+        checker: HttpRequestsChecker,
+        request: WrappedHttpRequest,
+        transform: ?Types.TransformRawResponseFunction,
+        params: {timeout: Nat; max_response_bytes: ?Nat64},
+    ): async* Types.HttpResponsePayload {
+        let headers = headersNew();
+        headers.unshare(request.headers);
+        await* checkedHttpRequest(
+            checker,
+            {
+                method = request.method;
+                headers = headers;
+                url = request.url;
+                body = request.body;
+            },
+            transform,
+            params,
+        );
+    };
+
     public func headersNew(): RBTree.RBTree<Text, [Text]> {
         RBTree.RBTree<Text, [Text]>(Text.compare);
     };

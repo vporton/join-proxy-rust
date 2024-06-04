@@ -7,11 +7,13 @@ import Cycles "mo:base/ExperimentalCycles";
 actor HttpCaller {
     stable let requestsChecker = Http.newHttpRequestsChecker();
 
-    let timeout = 60 * 1_000_000_000; // 1 min
-
-    public shared func callHttp(request: Types.HttpRequestArgs, cycles: Nat): async Types.HttpResponsePayload {
-        Cycles.add<system>(cycles);
-        await* Http.checkedHttpRequest(requestsChecker, request, {timeout});
+    public shared func callHttp(
+        request: Http.WrappedHttpRequest,
+        transform: ?Types.TransformRawResponseFunction,
+        params: {timeout: Nat; max_response_bytes: ?Nat64; cycles: Nat}
+    ): async Types.HttpResponsePayload {
+        Cycles.add<system>(params.cycles);
+        await* Http.checkedHttpRequestWrapped(requestsChecker, request, transform, params);
     };
 
     /// This function is needed even, if you use `inspect`, because
@@ -25,7 +27,12 @@ actor HttpCaller {
     system func inspect({
         caller : Principal;
         arg : Blob;
-        msg : {#callHttp : () -> (Types.HttpRequestArgs, Nat); #checkRequest : () -> Blob}
+        msg : {
+            #callHttp : () ->
+                (Http.WrappedHttpRequest, ?Types.TransformRawResponseFunction,
+                {cycles : Nat; max_response_bytes : ?Nat64; timeout : Nat});
+            #checkRequest : () -> Blob;
+        }
     }) : Bool {
         switch (msg) {
             case (#checkRequest hash) {
