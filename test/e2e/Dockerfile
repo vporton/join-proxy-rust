@@ -49,7 +49,7 @@ COPY dfx.json test/e2e/tmpl/
 COPY mops.toml test/e2e/tmpl/
 
 RUN cargo build
-RUN mops install
-RUN dfx start --background && dfx deploy && dfx stop
+RUN cd test/e2e/tmpl/ && mops install
+RUN cd test/e2e/tmpl/ && dfx start --background && dfx deploy && dfx stop
 
 CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=info && ./target/debug/e2e"
