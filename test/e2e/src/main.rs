@@ -3,7 +3,7 @@ use std::{fs::{read_to_string, write, File}, path::{Path, PathBuf}, process::Com
 use candid::{Decode, Encode};
 use fs_extra::{dir, file};
 use ic_agent::{export::Principal, Agent};
-use like_shell::{run_successful_command, temp_dir_from_template, Capture, TemporaryChild};
+use like_shell::{temp_dir_from_template, Capture, TemporaryChild};
 // use dotenv::dotenv;
 use tempdir::TempDir;
 use tokio::time::sleep;
@@ -28,11 +28,6 @@ impl Test {
         let dir = temp_dir_from_template(tmpl_dir)?;
         dir::copy(workspace_dir.join("motoko"), dir.path(), &dir::CopyOptions::new())
             .context("Copying files.")?; // FIXME: What should be `copy_inside` value?
-        file::copy(
-            workspace_dir.join("mops.toml"),
-            dir.path().join("mops.toml"),
-            &file::CopyOptions::new(),
-        ).context("Copying a file.")?;
     
         // TODO: Specifying a specific port is a hack.
         let dfx_daemon = TemporaryChild::spawn(&mut Command::new(
@@ -40,10 +35,6 @@ impl Test {
         ).args(["start", "--host", "127.0.0.1:8007"]).current_dir(dir.path()), Capture { stdout: None, stderr: None })
             .context("Starting DFX")?;
         sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
-        run_successful_command(Command::new("mops").arg("install").arg("--verbose").current_dir(dir.path()))
-            .context("Installing MOPS packages.")?;
-        run_successful_command(Command::new("dfx").arg("deploy").current_dir(dir.path()))
-            .context("Deploying.")?;
         // dotenv().ok();
 
         let port_str = read_to_string(
