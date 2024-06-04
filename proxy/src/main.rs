@@ -96,7 +96,7 @@ fn deserialize_http_response(data: &[u8]) -> anyhow::Result<actix_web::HttpRespo
     Ok(response)
 }
 
-fn obtain_upstream_url(req: &actix_web::HttpRequest) -> anyhow::Result<String> {
+fn obtain_upstream_base_url(req: &actix_web::HttpRequest) -> anyhow::Result<String> {
     let host = req.headers().get("host")
         .ok_or_else(|| anyhow!("Missing Host: header"))?
         .to_str()?;
@@ -154,8 +154,7 @@ async fn proxy(
     }
 
     println!("XXX: {:?}", req.headers()); // FIXME: Remove.     
-    let url = obtain_upstream_url(&req)?;
-    let serialized_request = serialize_http_request(&req, url.as_str(), &body)?;
+    let serialized_request = serialize_http_request(&req, req.path(), &body)?;
     println!("RUST: {:?}", String::from_utf8_lossy(&serialized_request)); // FIXME: Remove.
     let actix_request_hash = Sha256::digest(serialized_request.as_slice());
 
@@ -211,7 +210,8 @@ async fn proxy(
             info!("Callback OK.");
         }
 
-        let reqwest = prepare_request(&req, req.path().to_string(), &body, &config, &state).await?;
+        let base_url = obtain_upstream_base_url(&req)?;
+        let reqwest = prepare_request(&req, base_url + req.path().to_string().as_str(), &body, &config, &state).await?;
         let reqwest_response = state.client.execute(reqwest).await?;
         info!("Upstream status: {}", reqwest_response.status());
 
