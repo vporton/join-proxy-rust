@@ -70,7 +70,7 @@ fn serialize_http_response(response: &reqwest::Response, bytes: bytes::Bytes) ->
         .collect::<anyhow::Result<Vec<_>>>()?;
     let headers_joined = headers_list.into_iter().reduce(|a, b| a + "\r" + &b);
     let headers_joined = headers_joined.unwrap_or_else(|| "".to_string());
-    let header_part = response.status().to_string() + "\n" + /*response.url().as_str() + "\n" +*/ &headers_joined;
+    let header_part = response.status().to_string() + "\n" + &headers_joined;
 
     Ok([header_part.as_bytes(), b"\n", &bytes].concat())
 }
