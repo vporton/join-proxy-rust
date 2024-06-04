@@ -45,7 +45,9 @@ module {
             case (?s) s;
             case null "";
         };
-        let header_part = method # "\n" # request.url/*FIXME: wrong: it should not be not proxy URL*/ # "\n" # headers_joined2;
+        let the_rest = Itertools.take(request.url.chars(), 8); // strip "https://"
+        let url = Itertools.skipWhile<Char>(the_rest, func (c: Char) { c != '/' });
+        let header_part = method # "\n" # Text.fromIter(url) # "\n" # headers_joined2;
 
         let result = Buffer.Buffer<Nat8>(header_part.size() + 1 + request.body.size());
         result.append(Buffer.fromArray(Blob.toArray(Text.encodeUtf8(header_part))));

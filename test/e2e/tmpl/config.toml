@@ -1,8 +1,6 @@
 # Simple Bearer authentication. On IC platform you should use callback authentication instead.
 #our_secret = "<KEY>"
 
-upstream_prefix = "https://local.vporton.name:8081"
-
 # TODO: Move this to [callback]
 ic_local = true
 ic_url = "http://127.0.0.1:8007" # "http://localhost:8007"

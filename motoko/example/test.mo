@@ -1,19 +1,16 @@
 import Http "../";
 import Call "canister:call";
 import Blob "mo:base/Blob";
-import Bool "mo:base/Bool";
 import Debug "mo:base/Debug";
 import Text "mo:base/Text";
 
 actor Test {
-    public shared func test(addHost: Bool): async Text {
+    public shared func test(): async Text {
         let headers = Http.headersNew();
+        headers.put("Host", ["local.vporton.name:8081"]); // overrides the default
         // Add arbitrary headers for testing:
         headers.put("Content-Type", ["text/plain"]);
         headers.put("X-My", ["my", "my2"]);
-        if (addHost) {
-            headers.put("Host", ["local.vporton.name:8081"]); // overrides the default
-        };
         let res = await Call.callHttp(
             {
                 url = "https://local.vporton.name:8443";
