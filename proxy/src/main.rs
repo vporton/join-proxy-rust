@@ -153,9 +153,7 @@ async fn proxy(
         }
     }
 
-    println!("XXX: {:?}", req.headers()); // FIXME: Remove.     
     let serialized_request = serialize_http_request(&req, req.path(), &body)?;
-    println!("RUST: {:?}", String::from_utf8_lossy(&serialized_request)); // FIXME: Remove.
     let actix_request_hash = Sha256::digest(serialized_request.as_slice());
 
     let mut cache = (***cache).lock().await;

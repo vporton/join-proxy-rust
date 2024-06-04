@@ -60,15 +60,6 @@ module {
     public func hashOfHttpRequest(request: HttpRequest): Blob {
         // TODO: space inefficient
         let blob = serializeHttpRequest(request);
-        // FIXME: Remove.
-        Debug.print("MOTOKO: " # Text.translate(Option.unwrap(Text.decodeUtf8(blob)), func(c) {
-            switch (c) {
-                case '\t' "\\t";
-                case '\n' "\\n";
-                case '\r' "\\r";
-                case _ Text.fromChar(c);
-            }
-        }));
         Sha256.fromBlob(#sha256, blob);
     };
 
