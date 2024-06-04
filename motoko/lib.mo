@@ -45,7 +45,7 @@ module {
             case (?s) s;
             case null "";
         };
-        let header_part = method # "\n" # request.url # "\n" # headers_joined2;
+        let header_part = method # "\n" # request.url/*FIXME: wrong: it should not be not proxy URL*/ # "\n" # headers_joined2;
 
         let result = Buffer.Buffer<Nat8>(header_part.size() + 1 + request.body.size());
         result.append(Buffer.fromArray(Blob.toArray(Text.encodeUtf8(header_part))));
