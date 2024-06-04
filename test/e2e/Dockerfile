@@ -40,16 +40,17 @@ RUN cp CA.pem /usr/local/share/ca-certificates/localhost.crt
 # Update CA certificates
 RUN update-ca-certificates
 
-COPY motoko/ ./motoko/
-COPY proxy/ ./proxy/
-COPY test/ ./test/
+COPY proxy proxy
+COPY test test
 COPY Cargo.lock .
 COPY Cargo.toml .
 COPY dfx.json test/e2e/tmpl/
+COPY motoko test/e2e/tmpl/motoko
 COPY mops.toml test/e2e/tmpl/
 
 RUN cargo build
-RUN cd test/e2e/tmpl/ && mops install
-RUN cd test/e2e/tmpl/ && dfx start --background && dfx deploy && dfx stop
+RUN export PATH=$HOME/.local/share/dfx/bin:$PATH && dfx cache install
+RUN export PATH=$HOME/.local/share/dfx/bin:$PATH && cd test/e2e/tmpl/ && mops install
+RUN export PATH=$HOME/.local/share/dfx/bin:$PATH &&  cd test/e2e/tmpl/ && dfx start --background && dfx deploy && dfx stop
 
 CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=info && ./target/debug/e2e"

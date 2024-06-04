@@ -1,7 +1,6 @@
 use std::{fs::{read_to_string, write, File}, path::{Path, PathBuf}, process::Command, time::Duration};
 
 use candid::{Decode, Encode};
-use fs_extra::dir;
 use ic_agent::{export::Principal, Agent};
 use like_shell::{temp_dir_from_template, Capture, TemporaryChild};
 // use dotenv::dotenv;
@@ -26,8 +25,6 @@ impl Test {
         let cargo_manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let workspace_dir = cargo_manifest_dir.join("..").join("..");
         let dir = temp_dir_from_template(tmpl_dir)?;
-        dir::copy(workspace_dir.join("motoko"), dir.path(), &dir::CopyOptions::new())
-            .context("Copying files.")?; // FIXME: What should be `copy_inside` value?
     
         // TODO: Specifying a specific port is a hack.
         let dfx_daemon = TemporaryChild::spawn(&mut Command::new(
