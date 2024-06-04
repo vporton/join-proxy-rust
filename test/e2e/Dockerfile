@@ -51,6 +51,5 @@ COPY mops.toml test/e2e/tmpl/
 RUN cargo build
 RUN export PATH=$HOME/.local/share/dfx/bin:$PATH && dfx cache install
 RUN export PATH=$HOME/.local/share/dfx/bin:$PATH && cd test/e2e/tmpl/ && mops install
-RUN export PATH=$HOME/.local/share/dfx/bin:$PATH &&  cd test/e2e/tmpl/ && dfx start --background && dfx deploy && dfx stop
 
 CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=info && ./target/debug/e2e"

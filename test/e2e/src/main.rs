@@ -2,7 +2,7 @@ use std::{fs::{read_to_string, write, File}, path::{Path, PathBuf}, process::Com
 
 use candid::{Decode, Encode};
 use ic_agent::{export::Principal, Agent};
-use like_shell::{temp_dir_from_template, Capture, TemporaryChild};
+use like_shell::{run_successful_command, temp_dir_from_template, Capture, TemporaryChild};
 // use dotenv::dotenv;
 use tempdir::TempDir;
 use tokio::time::sleep;
@@ -29,9 +29,12 @@ impl Test {
         // TODO: Specifying a specific port is a hack.
         let dfx_daemon = TemporaryChild::spawn(&mut Command::new(
             "/root/.local/share/dfx/bin/dfx" // TODO: Split path.
-        ).args(["start", "--host", "127.0.0.1:8007"]).current_dir(dir.path()), Capture { stdout: None, stderr: None })
+        ).args(["start", "--clean", "--host", "127.0.0.1:8007"]).current_dir(dir.path()), Capture { stdout: None, stderr: None })
             .context("Starting DFX")?;
         sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
+        run_successful_command(Command::new(
+            "/root/.local/share/dfx/bin/dfx" // TODO: Split path.
+        ).args(["deploy"]))?;
         // dotenv().ok();
 
         let port_str = read_to_string(
