@@ -105,16 +105,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         test.workspace_dir.join("target").join("debug").join("joining-proxy")
     ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
     sleep(Duration::from_millis(2000)).await; // Wait till daemons start. // TODO: Reduce sleeps.
-    // println!("CURL");
-    // run_successful_command(Command::new("cat").args(["/etc/hosts"]))?;
-    // run_successful_command(Command::new("curl").args(["-s", "--ipv6", "-v", "https://local.vporton.name:8081/"]))?;
-    // println!("WGET");
-    // run_successful_command(Command::new("wget").arg("-6").arg("-v").arg("https://localhost:8443/"))?;
-    // println!("END");
-    // println!("MYHYPER");
-    // run_successful_command(
-    //     &mut Command::new(test.workspace_dir.join("target").join("debug").join("myhyper")))?;
-    // println!("END");
+    println!("CURL");
+    run_successful_command(Command::new("curl").args(["-s", "--ipv6", "https://local.vporton.name:8081/"]))?;
+    println!("END");
     test_calls(&test).await?;
     // TODO
     Ok(())

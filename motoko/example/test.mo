@@ -1,4 +1,5 @@
 import Http "../";
+import Types "../HttpTypes";
 import Call "canister:call";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
@@ -18,7 +19,6 @@ actor Test {
                 body = "";
                 method = #get;
             },
-            null,
             {
                 max_response_bytes = ?10_000;
                 cycles = 900_000_000_000; // TODO: much too much
@@ -29,5 +29,5 @@ actor Test {
             Debug.trap("No response body.")
         };
         body;
-    }
+    };
 };

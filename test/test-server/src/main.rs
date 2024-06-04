@@ -45,7 +45,7 @@ async fn main() -> anyhow::Result<()> {
         App::new().route("/", web::get().to(test_page))
     })
         .bind_rustls_0_23(
-            "[::1]:8081", // FIXME: "localhost:8081" binds only IPv4, in some reason.
+            "local.vporton.name:8081",
             ServerConfig::builder().with_no_client_auth()
                 .with_single_cert(cert_chain, rustls::pki_types::PrivateKeyDer::Pkcs8(key))?
         )?

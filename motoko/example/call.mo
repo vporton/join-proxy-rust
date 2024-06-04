@@ -9,11 +9,10 @@ actor HttpCaller {
 
     public shared func callHttp(
         request: Http.WrappedHttpRequest,
-        transform: ?Types.TransformRawResponseFunction,
         params: {timeout: Nat; max_response_bytes: ?Nat64; cycles: Nat}
     ): async Types.HttpResponsePayload {
         Cycles.add<system>(params.cycles);
-        await* Http.checkedHttpRequestWrapped(requestsChecker, request, transform, params);
+        await* Http.checkedHttpRequestWrapped(requestsChecker, request, ?{ function = transform; context = "" }, params);
     };
 
     /// This function is needed even, if you use `inspect`, because
@@ -24,14 +23,23 @@ actor HttpCaller {
         }
     };
 
+    public query func transform(args: Types.TransformArgs): async Types.HttpResponsePayload {
+        {
+            status = args.response.status;
+            headers = [];
+            body = args.response.body;
+        };
+    };
+
     system func inspect({
         caller : Principal;
         arg : Blob;
         msg : {
             #callHttp : () ->
-                (Http.WrappedHttpRequest, ?Types.TransformRawResponseFunction,
+                (Http.WrappedHttpRequest,
                 {cycles : Nat; max_response_bytes : ?Nat64; timeout : Nat});
             #checkRequest : () -> Blob;
+            #transform : () -> Types.TransformArgs
         }
     }) : Bool {
         switch (msg) {

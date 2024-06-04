@@ -163,6 +163,7 @@ async fn proxy(
     // We lock during the time of downloading from upstream to prevent duplicate requests with identical data.
     let mut cache_lock = cache.lock(&Vec::from(actix_request_hash.as_slice())).await?;
 
+    // FIXME: nonsense with response body that I do below:
     let response = &mut if let Some(serialized_response) = (*cache_lock).inner().await
     {
         std::mem::drop(cache_lock);
@@ -259,7 +260,7 @@ async fn proxy(
     };
 
     Ok(actix_web::HttpResponse::build(StatusCode::from_u16(response.status().as_u16())?)
-        .body(Vec::from(body.as_ref())))
+        .body(Vec::from(response.body().as_ref())))
 }
 
 #[actix_web::main]
