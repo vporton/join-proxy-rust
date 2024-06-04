@@ -2,7 +2,7 @@ mod errors;
 mod cache;
 mod config;
 
-use std::{fs::{read_to_string, File}, io::BufReader, str::{from_utf8, FromStr}, sync::Arc, time::Instant};
+use std::{collections::{btree_map::Entry, BTreeMap}, fs::{read_to_string, File}, io::BufReader, str::{from_utf8, FromStr}, sync::Arc, time::Instant};
 
 use log::info;
 use rustls::ServerConfig;
@@ -38,11 +38,23 @@ struct State {
 // Two similar functions with different data types follow:
 
 fn serialize_http_request(request: &actix_web::HttpRequest, bytes: &actix_web::web::Bytes) -> anyhow::Result<Vec<u8>> {
-    let headers_list = request.headers().into_iter()
-        .map(|(k, v)| -> anyhow::Result<String> {
-            Ok(k.to_string() + "\t" + v.to_str()?)
-        })
-        .collect::<anyhow::Result<Vec<_>>>()?;
+    // FIXME: Should convert headers to lowercase?
+    let mut headers = BTreeMap::new();
+    for (k, v) in request.headers().into_iter() { // lexigraphical order
+        let entry = headers.entry(k.as_str());
+        let v_str = v.to_str()?;
+        match entry {
+            Entry::Vacant(vacant_entry) => {
+                vacant_entry.insert(vec![v_str]);
+            }
+            Entry::Occupied(mut occupied_entry) => {
+                occupied_entry.get_mut().push(v_str);
+            }
+        }
+    }
+    let headers_list = headers.into_iter()
+        .map(|(k, v)| k.to_string() + "\t" + v.join("\t").as_str())
+        .collect::<Vec<_>>();
     let headers_joined = headers_list.into_iter().reduce(|a, b| a + "\r" + &b);
     let headers_joined = headers_joined.unwrap_or_else(|| "".to_string());
     let header_part = request.method().as_str().to_owned() + "\n" + &request.uri().to_string() + "\n" + &headers_joined;
