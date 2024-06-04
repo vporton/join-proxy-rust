@@ -53,7 +53,7 @@ fn serialize_http_request(request: &actix_web::HttpRequest, bytes: &actix_web::w
         }
     }
     let headers_list = headers.into_iter()
-        .map(|(k, v)| k.to_string() + "\t" + v.join("\t").as_str())
+        .map(|(k, v)| k.to_string() + "\t" + &v.join("\t"))
         .collect::<Vec<_>>();
     let headers_joined = headers_list.into_iter().reduce(|a, b| a + "\r" + &b);
     let headers_joined = headers_joined.unwrap_or_else(|| "".to_string());
