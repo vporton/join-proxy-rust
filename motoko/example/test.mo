@@ -1,3 +1,4 @@
+import Http "../";
 import Call "canister:call";
 import Blob "mo:base/Blob";
 import Bool "mo:base/Bool";
@@ -5,21 +6,18 @@ import Debug "mo:base/Debug";
 import Text "mo:base/Text";
 
 actor Test {
-    // User-Agent and Accept headers are mandatory, because they are added by IC. // FIXME
     public shared func test(addHost: Bool): async Text {
+        let headers = Http.headersNew();
+        // Add arbitrary headers for testing:
+        headers.put("Content-Type", "text/plain");
+        headers.put("X-My", "my");
+        if (addHost) {
+            headers.put("Host", "local.vporton.name:8081"); // overrides the default
+        };
         let res = await Call.callHttp({
             url = "https://local.vporton.name:8443";
             max_response_bytes = ?10_000;
-            headers = if (addHost) [
-                {name = "Host"; value = "local.vporton.name:8081"}, // overrides the default
-                {name = "Content-Type"; value = "text/plain"},
-                {name = "User-Agent"; value = "my-agent" }, // mandatory header
-                {name = "Accept"; value = "*/*" }, // mandatory header
-            ] else [
-                {name = "Content-Type"; value = "text/plain"},
-                {name = "User-Agent"; value = "my-agent" }, // mandatory header
-                {name = "Accept"; value = "*/*" }, // mandatory header
-            ];
+            headers;
             body = null;
             method = #get;
             transform = null;

@@ -12,17 +12,34 @@ import Nat32 "mo:base/Nat32";
 import Time "mo:base/Time";
 import Int "mo:base/Int";
 import BTree "mo:stableheapbtreemap/BTree";
+import RBTree "mo:base/RBTree";
+import Option "mo:base/Option";
 
 module {
-    public func serializeHttpRequest(request: Types.HttpRequestArgs): Blob {
-        let method = switch(request.method) {
+    public type HttpMethod = { #get; #post; #head };
+
+    public type HttpHeaders = RBTree.RBTree<Text, [Text]>;
+
+    public type HttpRequest = {
+        method: HttpMethod;
+        headers: HttpHeaders;
+        url: Text;
+        body: Blob;
+    };
+
+    func httpMethodToText(method: HttpMethod): Text {
+        switch(method) {
             case(#get) { "GET" };
             case(#post) { "POST" };
             case(#head) { "HEAD" };
         };
-        let headers_list = Iter.map<Types.HttpHeader, Text>(
-            request.headers.vals(),
-            func ({name: Text; value: Text}) { name # "\t" # value });
+    };
+
+    public func serializeHttpRequest(request: HttpRequest): Blob {
+        let method = httpMethodToText(request.method);
+        let headers_list = Iter.map<(Text, [Text]), Text>(
+            request.headers.entries(),
+            func (entry: (Text, [Text])) { entry.0 # "\t" # Text.join("\t", entry.1.vals()); });
         let headers_joined = Itertools.reduce<Text>(headers_list, func(a: Text, b: Text) {a # "\r" # b});
         let headers_joined2 = switch (headers_joined) {
             case (?s) s;
@@ -30,18 +47,14 @@ module {
         };
         let header_part = method # "\n" # request.url # "\n" # headers_joined2;
 
-        let body = switch(request.body) {
-            case (?body) { body };
-            case null { [] };
-        };
-        let result = Buffer.Buffer<Nat8>(header_part.size() + 1 + body.size());
+        let result = Buffer.Buffer<Nat8>(header_part.size() + 1 + request.body.size());
         result.append(Buffer.fromArray(Blob.toArray(Text.encodeUtf8(header_part))));
         result.add(Nat8.fromNat(Nat32.toNat(Char.toNat32('\n'))));
-        result.append(Buffer.fromArray(body));
+        result.append(Buffer.fromArray(Blob.toArray(request.body)));
         Blob.fromArray(Buffer.toArray(result));
     };
 
-    public func hashOfHttpRequest(request: Types.HttpRequestArgs): Blob {
+    public func hashOfHttpRequest(request: HttpRequest): Blob {
         // TODO: space inefficient
         let blob = serializeHttpRequest(request);
         Sha256.fromBlob(#sha256, blob);
@@ -110,7 +123,7 @@ module {
         Debug.print(debug_show(BTree.min(checker.hashes)) # " - our hash after insert."); // TODO: Remove.
     };
 
-    public func announceHttpRequest(checker: HttpRequestsChecker, request: Types.HttpRequestArgs, params: {timeout: Nat}) {
+    public func announceHttpRequest(checker: HttpRequestsChecker, request: HttpRequest, params: {timeout: Nat}) {
         announceHttpRequestHash(checker, hashOfHttpRequest(request), params);
     };
 
@@ -120,9 +133,60 @@ module {
         BTree.has(checker.hashes, Blob.compare, hash);
     };
 
-    public func checkedHttpRequest(checker: HttpRequestsChecker, request: Types.HttpRequestArgs, params: {timeout: Nat}): async* Types.HttpResponsePayload {
+    func headersToLowercase(headers: HttpHeaders) {
+        for (entry in headers.entries()) {
+            headers.put(Text.toLowercase(entry.0), entry.1);
+        }
+    };
+
+    func modifyHttpRequest(request: HttpRequest) {
+        let headers = request.headers;
+        
+        headersToLowercase(headers);
+
+        // Some headers are added automatically, if missing. Provide them here, to match the hash:
+        if (Option.isNull(headers.get("user-agent"))) {
+            headers.put("user-agent", ["IC/for-Join-Proxy"]);
+        };
+        if (Option.isNull(headers.get("accept"))) {
+            headers.put("accept", ["*/*"]);
+        };
+        if (Option.isNull(headers.get("host"))) {
+            let the_rest = Itertools.take(request.url.chars(), 8); // strip "https://"
+            // We don't worry if request.url really starts with "https://" because it will be caught later.
+            let host = Itertools.takeWhile<Char>(the_rest, func (c: Char) { c != '/' });
+            headers.put("host", [Text.fromIter(host)]);
+            // FIXME: Should port 443 be present in host?
+        };
+    };
+
+    /// Note that `request` will be modified.
+    public func checkedHttpRequest(
+        checker: HttpRequestsChecker,
+        request: HttpRequest,
+        transform: ?Types.TransformRawResponseFunction,
+        params: {timeout: Nat; max_response_bytes: ?Nat64},
+    ): async* Types.HttpResponsePayload {
+        modifyHttpRequest(request);
         announceHttpRequest(checker, request, params);
         Debug.print(debug_show(BTree.min(checker.hashes)) # " - our min hash 2."); // TODO: Remove.
-        await Types.ic.http_request(request);
+        let http_headers = Buffer.Buffer<{name: Text; value: Text}>(0);
+        for ((name, values) in request.headers.entries()) { // ordered lexicographically
+            for (value in values.vals()) {
+                http_headers.add({name; value});
+            }
+        };
+        await Types.ic.http_request({
+            method = request.method;
+            headers = Buffer.toArray(http_headers);
+            url = request.url;
+            body = ?Blob.toArray(request.body);
+            transform = transform;
+            max_response_bytes = params.max_response_bytes;
+        });
+    };
+
+    public func headersNew(): RBTree.RBTree<Text, [Text]> {
+        RBTree.RBTree<Text, [Text]>(Text.compare);
     };
 };
