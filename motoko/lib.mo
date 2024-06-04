@@ -123,7 +123,6 @@ module {
             }
         };
         ignore BTree.insert(subtree, Blob.compare, hash, ());
-        Debug.print(debug_show(BTree.min(checker.hashes)) # " - our hash after insert."); // TODO: Remove.
     };
 
     public func announceHttpRequest(checker: HttpRequestsChecker, request: HttpRequest, params: {timeout: Nat}) {
