@@ -1,7 +1,7 @@
 use std::{fs::{read_to_string, write, File}, path::{Path, PathBuf}, process::Command, time::Duration};
 
 use candid::{Decode, Encode};
-use fs_extra::{dir, file};
+use fs_extra::dir;
 use ic_agent::{export::Principal, Agent};
 use like_shell::{temp_dir_from_template, Capture, TemporaryChild};
 // use dotenv::dotenv;
