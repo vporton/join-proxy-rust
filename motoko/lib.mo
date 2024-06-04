@@ -189,8 +189,7 @@ module {
                 http_headers.add({name; value});
             }
         };
-        // TODO:
-        let res = await Types.ic.http_request({
+        await Types.ic.http_request({
             method = request.method;
             headers = Buffer.toArray(http_headers);
             url = request.url;
@@ -198,8 +197,6 @@ module {
             transform = transform;
             max_response_bytes = params.max_response_bytes;
         });
-        Debug.print("BOYD: " # debug_show(res.body));
-        res;
     };
 
     public type WrappedHttpRequest = {

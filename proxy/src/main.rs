@@ -138,7 +138,7 @@ async fn proxy(
     cache: Data<Arc<tokio::sync::Mutex<Box<BinaryMemCache>>>>,
     state: Data<State>, 
 )
-    -> MyResult<actix_web::HttpResponse>
+    -> MyResult<actix_web::HttpResponse<Vec<u8>>>
 {
     // info!("REQ: {:?}", &req);
     info!("Joining proxy received a request to {}", req.path());
@@ -149,7 +149,7 @@ async fn proxy(
             .map(|v| v.to_str().map_err(|_| anyhow!("Cannot read header X-JoinProxy-Key")))
             .transpose()?;
         if passed_key != Some(&("Bearer ".to_string() + &our_secret)) {
-            return Ok(HttpResponse::new(StatusCode::NETWORK_AUTHENTICATION_REQUIRED));
+            return Ok(HttpResponse::with_body(StatusCode::NETWORK_AUTHENTICATION_REQUIRED, Vec::new()));
         }
     }
 
@@ -163,8 +163,7 @@ async fn proxy(
     // We lock during the time of downloading from upstream to prevent duplicate requests with identical data.
     let mut cache_lock = cache.lock(&Vec::from(actix_request_hash.as_slice())).await?;
 
-    // FIXME: nonsense with response body that I do below:
-    let response = &mut if let Some(serialized_response) = (*cache_lock).inner().await
+    if let Some(serialized_response) = (*cache_lock).inner().await
     {
         std::mem::drop(cache_lock);
         info!("Cache hit.");
@@ -176,7 +175,7 @@ async fn proxy(
                 http_for_actix::HeaderValue::from_str("Hit").unwrap(),
             );
         }
-        response
+        Ok(response)
     } else {
         info!("Cache miss.");
 
@@ -204,7 +203,7 @@ async fn proxy(
                 }
                 if Instant::now().gt(&start.checked_add(callback.timing_out_calls_after).unwrap()) { // TODO: In principle, this can panic.
                     info!("Callback timeout");
-                    return Ok(HttpResponse::GatewayTimeout().body(""));
+                    return Ok(HttpResponse::with_body(StatusCode::GATEWAY_TIMEOUT, Vec::new()));
                 }
                 sleep(callback.pause_between_calls).await;
             }
@@ -220,8 +219,8 @@ async fn proxy(
         (*cache_lock).set(Some(serialize_http_response(&reqwest_response, body.clone())?)).await;
         std::mem::drop(cache_lock);
 
-        let mut actix_response = actix_web::HttpResponse::with_body(
-            StatusCode::from_u16(reqwest_response.status().as_u16())?, Vec::from(body.as_ref()));
+        let mut actix_response = actix_web::HttpResponse::new(
+            StatusCode::from_u16(reqwest_response.status().as_u16())?);
 
         let headers = actix_response.headers_mut();
         for (k, v) in reqwest_response.headers() {
@@ -256,11 +255,9 @@ async fn proxy(
             );
         }
 
-        actix_response
-    };
-
-    Ok(actix_web::HttpResponse::build(StatusCode::from_u16(response.status().as_u16())?)
-        .body(Vec::from(response.body().as_ref())))
+        let response_body: Vec<u8> = Vec::from(reqwest_response.bytes().await?);
+        Ok(actix_response.set_body(response_body))
+    }
 }
 
 #[actix_web::main]
