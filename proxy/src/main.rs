@@ -37,7 +37,7 @@ struct State {
 
 // Two similar functions with different data types follow:
 
-fn serialize_http_request(request: &actix_web::HttpRequest, bytes: &actix_web::web::Bytes) -> anyhow::Result<Vec<u8>> {
+fn serialize_http_request(request: &actix_web::HttpRequest, url: &str, bytes: &actix_web::web::Bytes) -> anyhow::Result<Vec<u8>> {
     // FIXME: Should convert headers to lowercase?
     let mut headers = BTreeMap::new();
     for (k, v) in request.headers().into_iter() { // lexigraphical order
@@ -57,7 +57,7 @@ fn serialize_http_request(request: &actix_web::HttpRequest, bytes: &actix_web::w
         .collect::<Vec<_>>();
     let headers_joined = headers_list.into_iter().reduce(|a, b| a + "\r" + &b);
     let headers_joined = headers_joined.unwrap_or_else(|| "".to_string());
-    let header_part = request.method().as_str().to_owned() + "\n" + &request.uri().to_string() + "\n" + &headers_joined;
+    let header_part = request.method().as_str().to_owned() + "\n" + url + "\n" + &headers_joined;
 
     Ok([header_part.as_bytes(), b"\n", bytes.to_vec().as_slice()].concat())
 }
@@ -96,7 +96,7 @@ fn deserialize_http_response(data: &[u8]) -> anyhow::Result<actix_web::HttpRespo
     Ok(response)
 }
 
-async fn prepare_request(req: &actix_web::HttpRequest, body: &web::Bytes, config: &Data<Config>, state: &Data<State>) -> MyResult<reqwest::Request> {
+fn obtain_upstream_url(config: &Data<Config>, req: &actix_web::HttpRequest) -> anyhow::Result<String> {
     let url_prefix = if let Some(upstream_prefix) = &config.upstream_prefix {
         upstream_prefix.clone()
     } else {
@@ -105,8 +105,10 @@ async fn prepare_request(req: &actix_web::HttpRequest, body: &web::Bytes, config
             .to_str()?;
         "https://".to_string() + host
     };
-    let url = url_prefix + req.path();
-    info!("Forwarding request to `{}`", url);
+    Ok(url_prefix + req.path())
+}
+
+async fn prepare_request(req: &actix_web::HttpRequest, url: String, body: &web::Bytes, config: &Data<Config>, state: &Data<State>) -> MyResult<reqwest::Request> {
 
     let request_headers = req.headers().into_iter()
         .map(|h| (h.0.clone(), h.1.clone()))
@@ -155,8 +157,10 @@ async fn proxy(
         }
     }
 
-    println!("XXX: {:?}", req.headers());
-    let serialized_request = serialize_http_request(&req, &body)?;
+    println!("XXX: {:?}", req.headers()); // FIXME: Remove.     
+    let url = obtain_upstream_url(&config, &req)?;
+    let serialized_request = serialize_http_request(&req, url.as_str(), &body)?;
+    println!("RUST: {:?}", String::from_utf8_lossy(&serialized_request)); // FIXME: Remove.
     let actix_request_hash = Sha256::digest(serialized_request.as_slice());
 
     let mut cache = (***cache).lock().await;
@@ -211,7 +215,7 @@ async fn proxy(
             info!("Callback OK.");
         }
 
-        let reqwest = prepare_request(&req, &body, &config, &state).await?;
+        let reqwest = prepare_request(&req, url, &body, &config, &state).await?;
         let reqwest_response = state.client.execute(reqwest).await?;
         info!("Upstream status: {}", reqwest_response.status());
 

@@ -57,6 +57,7 @@ module {
     public func hashOfHttpRequest(request: HttpRequest): Blob {
         // TODO: space inefficient
         let blob = serializeHttpRequest(request);
+        Debug.print("MOTOKO: " # debug_show(Text.decodeUtf8(blob))); // FIXME: Remove.
         Sha256.fromBlob(#sha256, blob);
     };
 
@@ -128,8 +129,6 @@ module {
     };
 
     public func checkHttpRequest(checker: HttpRequestsChecker, hash: Blob): Bool {
-        Debug.print(debug_show(BTree.min(checker.hashes)) # " - our min hash."); // TODO: Remove.
-        Debug.print(debug_show(hash) # " - asked hash."); // TODO: Remove.
         BTree.has(checker.hashes, Blob.compare, hash);
     };
 
@@ -169,7 +168,6 @@ module {
     ): async* Types.HttpResponsePayload {
         modifyHttpRequest(request);
         announceHttpRequest(checker, request, params);
-        Debug.print(debug_show(BTree.min(checker.hashes)) # " - our min hash 2."); // TODO: Remove.
         let http_headers = Buffer.Buffer<{name: Text; value: Text}>(0);
         for ((name, values) in request.headers.entries()) { // ordered lexicographically
             for (value in values.vals()) {
