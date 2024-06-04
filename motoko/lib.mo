@@ -47,7 +47,7 @@ module {
         };
         let the_rest = Itertools.skip(request.url.chars(), 8); // strip "https://"
         let url = Text.fromIter(Itertools.skipWhile<Char>(the_rest, func (c: Char) { c != '/' }));
-        Debug.print("URL[" # url # "]");
+        // Debug.print("URL[" # url # "]"); // TODO: Remove.
         let header_part = method # "\n/" # url # "\n" # headers_joined2;
 
         let result = Buffer.Buffer<Nat8>(header_part.size() + 1 + request.body.size());

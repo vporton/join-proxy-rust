@@ -42,8 +42,6 @@ An example of `config.toml`:
 # If you omit this entry, no Bearer authenticatio is done.
 our_secret = "<KEY>"
 
-upstream_prefix = "https://api.openai.com" # by default Host: header is used
-
 ic_local = false # if to use a local testnet, DON'T SET THIS TO TRUE IN PRODUCTION
 ic_url = "https://localhost:8000" # URL to connect to IC (for authorization), the default value is determined by `ic_local`
 

@@ -78,7 +78,6 @@ pub struct Serve {
 pub struct Config {
     pub serve: Serve,
     pub our_secret: Option<String>, // simple Bearer authentication
-    pub upstream_prefix: Option<String>,
     pub cache: CacheConfig,
     pub request_headers: RequestHeaders,
     pub response_headers: ResponseHeaders,

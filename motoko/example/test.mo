@@ -10,7 +10,7 @@ actor Test {
         headers.put("Host", ["local.vporton.name:8081"]); // overrides the default
         // Add arbitrary headers for testing:
         headers.put("Content-Type", ["text/plain"]);
-        headers.put("X-My", ["my", "my2"]);
+        headers.put("X-My", ["my"]); // FIXME: test https://forum.dfinity.org/t/apparently-broken-handling-of-same-named-http-headers-in-outcalls/31548
         let res = await Call.callHttp(
             {
                 url = "https://local.vporton.name:8443";
