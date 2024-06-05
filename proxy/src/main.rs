@@ -2,7 +2,7 @@ mod errors;
 mod cache;
 mod config;
 
-use std::{collections::{btree_map::Entry, BTreeMap}, fs::{read_to_string, File}, io::BufReader, str::{from_utf8, FromStr}, sync::Arc, time::Instant};
+use std::{collections::{btree_map::Entry, BTreeMap}, fs::{read_to_string, File}, io::BufReader, str::{from_utf8, FromStr}, sync::Arc};
 
 use log::info;
 use rustls::ServerConfig;
@@ -16,7 +16,7 @@ use reqwest::ClientBuilder;
 use ic_agent::Agent;
 use candid::{Decode, Encode};
 use sha2::{Digest, Sha256};
-use tokio::{sync::Mutex, time::sleep};
+use tokio::sync::Mutex;
 use anyhow::bail;
 
 use crate::config::Config;
@@ -182,32 +182,12 @@ async fn proxy(
         // Second level of defence: Ask back the calling canister.
         // Do it only once per outcall (our response content isn't secure anyway).
         if let (Some(agent), Some(callback)) = (&state.agent, &config.callback) {
-            sleep(callback.pause_before_first_call).await;
-            // TODO: Having several calls seems unnecessary.
-            // We may do several update calls, but (if so configured) only the last call is paid,
-            // thanks to message inspection.
-            let start = Instant::now();
+            // sleep(callback.pause_before_first_call).await;
             info!("Callback...");
-            loop {
-                let res = agent.update(&callback.canister, &callback.func)
-                    .with_arg(Encode!(&actix_request_hash.as_slice())?).call_and_wait().await; // TODO: call_and_wait()
-                match res {
-                    Err(e) => {
-                        info!("Callback result error: {e}");
-                    }
-                    Ok(res) => match Decode!(res.as_slice(), ()) { // check for errors
-                        Err(e) => {
-                            info!("Callback decode error: {e}"); // IC trap
-                        }
-                        Ok(_) => break,
-                    }
-                }
-                if Instant::now().gt(&start.checked_add(callback.timing_out_calls_after).unwrap()) { // TODO: In principle, this can panic.
-                    info!("Callback timeout");
-                    return Ok(HttpResponse::with_body(StatusCode::GATEWAY_TIMEOUT, Vec::new()));
-                }
-                sleep(callback.pause_between_calls).await;
-            }
+            let res = agent.update(&callback.canister, &callback.func)
+                .with_arg(Encode!(&actix_request_hash.as_slice())?).call_and_wait().await
+                .context("Callback")?;
+            Decode!(res.as_slice(), ()).context("Callback decode")?; // check for errors
             info!("Callback OK.");
         }
 
