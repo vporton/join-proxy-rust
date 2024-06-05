@@ -100,13 +100,13 @@ impl Drop for OurDFX {
 async fn test_calls(test: &OurDFX, path: &str, arg: &str) -> Result<(), Box<dyn std::error::Error>> {
     let body = "";
     let res =
-        test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(path, arg)?)
+        test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&path, &arg)?)
             .call_and_wait().await.context("Call to IC.")?;
     assert_eq!(
         Decode!(&res, String).context("Decoding test call response.")?,
         format!("path={}&arg={}&body={}", path, arg, body),
     );
-    // TODO: Check two parallel requests.
+    // TODO: Check two/three parallel requests.
     Ok(())
 }
 
