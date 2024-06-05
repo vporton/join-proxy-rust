@@ -97,11 +97,16 @@ impl Drop for OurDFX {
     }
 }
 
-async fn test_calls(test: &OurDFX) -> Result<(), Box<dyn std::error::Error>> {
+async fn test_calls(test: &OurDFX, path: &str, arg: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let body = "";
+    let farg = Encode!(&path.to_string(), &arg.to_string())?; // FIXME
     let res =
-        test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&()).unwrap())
+        test.agent.update(&test.test_canister_id, "test").with_arg(farg)
             .call_and_wait().await.context("Call to IC.")?;
-    assert_eq!(Decode!(&res, String).context("Decoding test call response.")?, "Test");
+    assert_eq!(
+        Decode!(&res, String).context("Decoding test call response.")?,
+        format!("path={}&arg={}&body={}", path, arg, body),
+    );
     // TODO: Check two parallel requests.
     Ok(())
 }
@@ -119,7 +124,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         test.base.workspace_dir.join("target").join("debug").join("joining-proxy")
     ).current_dir(test.base.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
     sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
-    test_calls(&test).await?;
+    test_calls(&test, "/qq", "zz").await?;
     // TODO
     Ok(())
 }

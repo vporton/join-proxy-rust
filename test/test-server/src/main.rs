@@ -1,19 +1,22 @@
 use std::{fs::File, io::BufReader};
+use std::vec::Vec;
 
 use derive_more::From;
 use thiserror::Error;
 use anyhow::Context;
 use rustls::ServerConfig;
 use rustls_pemfile::{certs, pkcs8_private_keys};
-use actix_web::{web, App, HttpResponse, HttpServer};
+use actix_web::{body::MessageBody, web::{self, Query}, App, HttpRequest, HttpResponse, HttpServer};
 use log::info;
 use anyhow::anyhow;
 
-async fn test_page() -> HttpResponse {
-    info!("Test server received a request.");
-    HttpResponse::Ok()
+async fn test_page(req: HttpRequest, arg: Query<String>, body: web::Bytes) -> Result<HttpResponse, Box<(dyn std::error::Error + 'static)>> {
+    let b = body.try_into_bytes().unwrap();
+    let res = format!("path={}&arg={}&body={}", req.uri(), arg, String::from_utf8(Vec::from(&*b))?); // TODO: Body is for POST.
+    info!("Test server serving: {}", res);
+    Ok(HttpResponse::Ok()
         .content_type("text/plain")
-        .body("Test")
+        .body(res))
 }
 
 #[derive(Debug, Error, From)]
@@ -42,7 +45,11 @@ async fn main() -> anyhow::Result<()> {
         .next().transpose()?.ok_or(anyhow!("No private key in the file."))?;
 
     HttpServer::new(|| {
-        App::new().route("/", web::get().to(test_page))
+        App::new().service(
+            web::scope("/{_:.*}")
+                .route("", web::get().to(test_page))
+                .route("/{tail:.*}", web::get().to(test_page))
+        )
     })
         .bind_rustls_0_23(
             "local.vporton.name:8081",

@@ -140,8 +140,8 @@ async fn proxy(
 )
     -> MyResult<actix_web::HttpResponse<Vec<u8>>>
 {
-    // info!("REQ: {:?}", &req);
-    info!("Joining proxy received a request to {}", req.path());
+    let path = req.uri().path_and_query().ok_or(anyhow!("can't get path and query"))?.as_str();
+    info!("Joining proxy received a request to {}", path);
     // First level of defence: X-JoinProxy-Key can be stolen by an IC replica owner:
     if let Some(our_secret) = &config.our_secret {
         let passed_key = req.headers()
@@ -153,7 +153,8 @@ async fn proxy(
         }
     }
 
-    let serialized_request = serialize_http_request(&req, req.path(), &body)?;
+    // TODO: Test that it works for paths like `/xx?` with question sign but without arguments.
+    let serialized_request = serialize_http_request(&req, path, &body)?;
     let actix_request_hash = Sha256::digest(serialized_request.as_slice());
 
     let mut cache = (***cache).lock().await;
@@ -181,6 +182,7 @@ async fn proxy(
         // Do it only once per outcall (our response content isn't secure anyway).
         if let (Some(agent), Some(callback)) = (&state.agent, &config.callback) {
             sleep(callback.pause_before_first_call).await;
+            // TODO: Having several calls seems unnecessary.
             // We may do several update calls, but (if so configured) only the last call is paid,
             // thanks to message inspection.
             let start = Instant::now();

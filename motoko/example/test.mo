@@ -5,7 +5,7 @@ import Debug "mo:base/Debug";
 import Text "mo:base/Text";
 
 actor Test {
-    public shared func test(): async Text {
+    public shared func test(path: Text, arg: Text): async Text {
         let headers = Http.headersNew();
         headers.put("Host", ["local.vporton.name:8081"]); // overrides the default
         // Add arbitrary headers for testing:
@@ -13,7 +13,7 @@ actor Test {
         headers.put("X-My", ["my"]); // FIXME: test https://forum.dfinity.org/t/apparently-broken-handling-of-same-named-http-headers-in-outcalls/31548
         let res = await Call.callHttp(
             {
-                url = "https://local.vporton.name:8443";
+                url = "https://local.vporton.name:8443" # path # "?arg=" # arg;
                 headers = headers.share();
                 body = "";
                 method = #get;
