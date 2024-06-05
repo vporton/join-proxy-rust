@@ -1,4 +1,5 @@
 use std::{fs::{read_to_string, write, File}, path::{Path, PathBuf}, process::Command, time::Duration};
+use std::slice::SliceConcatExt;
 
 use candid::{Decode, Encode};
 use ic_agent::{export::Principal, Agent};
@@ -40,13 +41,13 @@ struct OurDFX {
 }
 
 impl OurDFX {
-    pub async fn new(tmpl_dir: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn new(tmpl_dir: &Path, additional_args: &[&str]) -> Result<Self, Box<dyn std::error::Error>> {
         let base = Test::new(tmpl_dir).await?;
 
         // TODO: Specifying a specific port is a hack.
         run_successful_command(&mut Command::new(
             "/root/.local/share/dfx/bin/dfx" // TODO: Split path.
-        ).args(["start", "--host", "127.0.0.1:8007", "--background"]).current_dir(base.dir.path()))
+        ).args([["start", "--host", "127.0.0.1:8007", "--background"], additional_args].concat()).current_dir(base.dir.path())
             .context("Starting DFX")?;
 
         let port_str = read_to_string(
@@ -81,8 +82,6 @@ impl OurDFX {
             base,
             test_canister_id: Principal::from_text(test_canister_id)
                 .context("Parsing principal")?,
-            // call_canister_id: Principal::from_text(call_canister_id)
-            //     .context("Parsing principal")?,
             agent,
         })
     }
