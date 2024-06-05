@@ -99,7 +99,7 @@ impl Drop for OurDFX {
 
 async fn test_calls(test: &OurDFX, path: &str, arg: &str) -> Result<(), Box<dyn std::error::Error>> {
     let body = "";
-    let farg = Encode!(&path.to_string(), &arg.to_string())?; // FIXME
+    let farg = Encode!(&path.to_string(), &arg.to_string())?; // TODO: Remove `.to_string()`?
     let res =
         test.agent.update(&test.test_canister_id, "test").with_arg(farg)
             .call_and_wait().await.context("Call to IC.")?;

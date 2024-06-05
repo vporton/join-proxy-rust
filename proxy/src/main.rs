@@ -154,6 +154,7 @@ async fn proxy(
     }
 
     // TODO: Test that it works for paths like `/xx?` with question sign but without arguments.
+    // TODO: Check that https://example.com and https://example.com/ are exchangeable.
     let serialized_request = serialize_http_request(&req, path, &body)?;
     let actix_request_hash = Sha256::digest(serialized_request.as_slice());
 
@@ -211,7 +212,7 @@ async fn proxy(
         }
 
         let base_url = obtain_upstream_base_url(&req)?;
-        let reqwest = prepare_request(&req, base_url + req.path().to_string().as_str(), &body, &config, &state).await?;
+        let reqwest = prepare_request(&req, base_url + path, &body, &config, &state).await?;
         let reqwest_response = state.client.execute(reqwest).await?;
         info!("Upstream status: {}", reqwest_response.status());
 
