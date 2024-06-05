@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::{fs::File, io::BufReader};
 use std::vec::Vec;
 
@@ -10,9 +11,11 @@ use actix_web::{body::MessageBody, web::{self, Query}, App, HttpRequest, HttpRes
 use log::info;
 use anyhow::anyhow;
 
-async fn test_page(req: HttpRequest, arg: Query<String>, body: web::Bytes) -> Result<HttpResponse, Box<(dyn std::error::Error + 'static)>> {
+// Can `args` be simplified?
+async fn test_page(req: HttpRequest, args: Query<HashMap<String, String>>, body: web::Bytes) -> Result<HttpResponse, Box<(dyn std::error::Error + 'static)>> {
+    let arg = args.get("arg").map(|s| s.clone()).unwrap_or_default();
     let b = body.try_into_bytes().unwrap();
-    let res = format!("path={}&arg={}&body={}", req.uri(), arg, String::from_utf8(Vec::from(&*b))?); // TODO: Body is for POST.
+    let res = format!("path={}&arg={}&body={}", req.uri().path(), arg, String::from_utf8(Vec::from(&*b))?); // TODO: Body is for POST.
     info!("Test server serving: {}", res);
     Ok(HttpResponse::Ok()
         .content_type("text/plain")
