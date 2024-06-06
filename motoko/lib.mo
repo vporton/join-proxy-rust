@@ -14,6 +14,8 @@ import Int "mo:base/Int";
 import BTree "mo:stableheapbtreemap/BTree";
 import RBTree "mo:base/RBTree";
 import Option "mo:base/Option";
+import Array "mo:base/Array";
+import xNum "mo:xtended-numbers/NatX";
 
 module {
     public type HttpMethod = { #get; #post; #head };
@@ -149,6 +151,9 @@ module {
         headersToLowercase(headers);
 
         // Some headers are added automatically, if missing. Provide them here, to match the hash:
+        if (request.body != "") {
+            headers.put("content-length", [xNum.toText(Array.size(Blob.toArray(request.body)))]); // TODO: Is it efficient?
+        };
         if (Option.isNull(headers.get("user-agent"))) {
             headers.put("user-agent", ["IC/for-Join-Proxy"]);
         };
