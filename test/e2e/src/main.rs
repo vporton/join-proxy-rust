@@ -163,14 +163,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let headers1 = headers1?;
     let headers2 = headers2?;
     let headers3 = headers3?;
-    println!("LL: {:?}", &headers1); // FIXME: Remove.
 
     let (mut hit_count, mut miss_count) = (0, 0);
     for headers in [&headers1, &headers2, &headers3] {
-        if headers.iter().any(|h| h.name == "X-JoinProxy-Response" && h.value == "Hit") {
+        if headers.iter().any(|h| h.name == "x-joinproxy-response" && h.value == "Hit") {
             hit_count += 1;
         }
-        if headers.iter().any(|h| h.name == "X-JoinProxy-Response" && h.value == "Miss") {
+        if headers.iter().any(|h| h.name == "x-joinproxy-response" && h.value == "Miss") {
             miss_count += 1;
         }
     }

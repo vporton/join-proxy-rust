@@ -3,6 +3,7 @@ import Types "../HttpTypes";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
 import Cycles "mo:base/ExperimentalCycles";
+import Iter "mo:base/Iter";
 
 actor HttpCaller {
     stable let requestsChecker = Http.newHttpRequestsChecker();
@@ -24,9 +25,12 @@ actor HttpCaller {
     };
 
     public query func transform(args: Types.TransformArgs): async Types.HttpResponsePayload {
+        let headers = Iter.toArray(Iter.filter(
+            args.response.headers.vals(), func (h: {name: Text; value: Text}): Bool {h.name != "date"}
+        ));
         {
             status = args.response.status;
-            headers = [];
+            headers;
             body = args.response.body;
         };
     };

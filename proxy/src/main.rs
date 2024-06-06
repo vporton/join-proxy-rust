@@ -62,7 +62,7 @@ fn serialize_http_request(request: &actix_web::HttpRequest, url: &str, bytes: &a
     Ok([header_part.as_bytes(), b"\n", bytes.to_vec().as_slice()].concat())
 }
 
-fn serialize_http_response(response: &reqwest::Response, bytes: bytes::Bytes) -> anyhow::Result<Vec<u8>> {
+async fn serialize_http_response(response: reqwest::Response) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
     let headers_list = response.headers().into_iter()
         .map(|(k, v)| -> anyhow::Result<String> {
             Ok(k.to_string() + "\t" + v.to_str()?)
@@ -72,7 +72,8 @@ fn serialize_http_response(response: &reqwest::Response, bytes: bytes::Bytes) ->
     let headers_joined = headers_joined.unwrap_or_else(|| "".to_string());
     let header_part = response.status().as_u16().to_string() + "\n" + &headers_joined;
 
-    Ok([header_part.as_bytes(), b"\n", &bytes].concat())
+    let bytes = response.bytes().await?;
+    Ok(([header_part.as_bytes(), b"\n", &bytes].concat(), bytes.to_vec()))
 }
 
 fn deserialize_http_response(data: &[u8]) -> anyhow::Result<actix_web::HttpResponse<Vec<u8>>> {
@@ -201,14 +202,10 @@ async fn proxy(
         let reqwest = prepare_request(&req, base_url + path, &body, &config, &state).await?;
         let reqwest_response = state.client.execute(reqwest).await?;
         info!("Upstream status: {}", reqwest_response.status());
-
-        // We retrieved the response, immediately set and release the cache:
-        (*cache_lock).set(Some(serialize_http_response(&reqwest_response, body.clone())?)).await;
-        std::mem::drop(cache_lock);
+        let status = reqwest_response.status().as_u16();
 
         let mut actix_response = actix_web::HttpResponse::new(
-            StatusCode::from_u16(reqwest_response.status().as_u16())?);
-
+            StatusCode::from_u16(status)?);
         let headers = actix_response.headers_mut();
         for (k, v) in reqwest_response.headers() {
             headers.append(
@@ -216,6 +213,11 @@ async fn proxy(
                 http_for_actix::HeaderValue::from_str(v.to_str()?).map_err(|_| InvalidHeaderValueError::default())?,
             );
         }
+
+        // We retrieved the response, immediately set and release the cache:
+        let (cached, bytes) = serialize_http_response(reqwest_response).await?;
+        (*cache_lock).set(Some(cached)).await;
+        std::mem::drop(cache_lock);
 
         if config.response_headers.show_hit_miss {
             actix_response.headers_mut().append(
@@ -242,9 +244,8 @@ async fn proxy(
             );
         }
 
-        let response_body: Vec<u8> = Vec::from(reqwest_response.bytes().await?);
-        // println!("{}", "((".to_string() + &String::from_utf8_lossy(response_body.as_slice()) + "))"); // TODO: Remove
-        Ok(actix_response.set_body(response_body))
+        // let response_body: Vec<u8> = Vec::from(bytes);
+        Ok(actix_response.set_body(bytes))
     }
 }
 
