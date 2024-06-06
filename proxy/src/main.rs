@@ -264,7 +264,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // FIXME: "localhost:8081" binds only IPv4, in some reason.
-    let server_url = "[::1]".to_string()/*config.serve.host.clone()*/ + ":" + config.serve.port.to_string().as_str();
+    let server_url = config.serve.host.clone() + ":" + config.serve.port.to_string().as_str();
 
     let cache = Arc::new(Mutex::new(Box::new(BinaryMemCache::new(config.cache.cache_timeout))));
 
