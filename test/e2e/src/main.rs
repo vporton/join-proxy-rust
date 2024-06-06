@@ -127,6 +127,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // run_successful_command(&mut Command::new("curl").arg("https://local.vporton.name:8443/aa?arg=xx"))?;
     // println!("EE3");
     test_calls(&test, "/qq", "zz", "yu").await?;
-    // TODO
+    // TODO: Test with `--artificial-delay 0` and `--artificial-delay 5000`.
+    // TODO: Test that varying every one of three step parameters causes Miss.
     Ok(())
 }
