@@ -12,7 +12,6 @@ https = true
 cert_file = "localhost.crt"
 key_file = "localhost.decrypted.key"
 
-# FIXME: Uncomment.
 [callback]
 canister = "aaaaa-aa" # will be overwitten
 func = "checkRequest"
