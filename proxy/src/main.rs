@@ -185,10 +185,17 @@ async fn proxy(
             // sleep(callback.pause_before_first_call).await;
             info!("Callback...");
             let res = agent.update(&callback.canister, &callback.func)
-                .with_arg(Encode!(&actix_request_hash.as_slice())?).call_and_wait().await
-                .context("Callback")?;
-            Decode!(res.as_slice(), ()).context("Callback decode")?; // check for errors
-            info!("Callback OK.");
+                .with_arg(Encode!(&actix_request_hash.as_slice())?).call_and_wait().await;
+            match res {
+                Ok(res) => {
+                    Decode!(res.as_slice()).context("Callback decode")?; // checking for errors
+                    info!("Callback OK.");
+                }
+                Err(e) => {
+                    info!("Callback failed: {e}");
+                    Err(e)?;
+                }
+            }
         }
 
         let base_url = obtain_upstream_base_url(&req)?;
@@ -237,6 +244,7 @@ async fn proxy(
         }
 
         let response_body: Vec<u8> = Vec::from(reqwest_response.bytes().await?);
+        // println!("{}", "((".to_string() + &String::from_utf8_lossy(response_body.as_slice()) + "))"); // TODO: Remove
         Ok(actix_response.set_body(response_body))
     }
 }

@@ -1,5 +1,4 @@
 use std::{fs::{read_to_string, write, File}, path::{Path, PathBuf}, process::Command, time::Duration};
-use std::slice::SliceConcatExt;
 
 use candid::{Decode, Encode};
 use ic_agent::{export::Principal, Agent};
@@ -47,7 +46,7 @@ impl OurDFX {
         // TODO: Specifying a specific port is a hack.
         run_successful_command(&mut Command::new(
             "/root/.local/share/dfx/bin/dfx" // TODO: Split path.
-        ).args([["start", "--host", "127.0.0.1:8007", "--background"], additional_args].concat()).current_dir(base.dir.path())
+        ).args([&["start", "--host", "127.0.0.1:8007", "--background"] as &[&str], additional_args].concat()).current_dir(base.dir.path()))
             .context("Starting DFX")?;
 
         let port_str = read_to_string(
@@ -96,11 +95,11 @@ impl Drop for OurDFX {
     }
 }
 
-async fn test_calls(test: &OurDFX, path: &str, arg: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let body = "";
+async fn test_calls(test: &OurDFX, path: &str, arg: &str, body: &str) -> Result<(), Box<dyn std::error::Error>> {
     let res =
-        test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&path, &arg)?)
-            .call_and_wait().await.context("Call to IC.")?;
+        test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&path, &arg, &body)?)
+            .call_and_wait().await?;//.context("Call to IC.")?;
+    // println!("[[{:?}]]", res.map(|s| String::from_utf8_lossy(&s).to_string())); // TODO: Remove.
     assert_eq!(
         Decode!(&res, String).context("Decoding test call response.")?,
         format!("path={}&arg={}&body={}", path, arg, body),
@@ -114,7 +113,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cargo_manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let tmpl_dir = cargo_manifest_dir.join("tmpl");
 
-    let test = OurDFX::new(&tmpl_dir).await?;
+    let test = OurDFX::new(&tmpl_dir, &[]).await?;
     let _test_http = TemporaryChild::spawn(&mut Command::new(
         test.base.workspace_dir.join("target").join("debug").join("test-server")
     ), Capture { stdout: None, stderr: None }).context("Running test HTTPS server")?;
@@ -122,7 +121,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         test.base.workspace_dir.join("target").join("debug").join("joining-proxy")
     ).current_dir(test.base.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
     sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
-    test_calls(&test, "/qq", "zz").await?;
+    // println!("EE1");
+    // run_successful_command(&mut Command::new("curl").arg("https://local.vporton.name:8081/aa?arg=xx"))?;
+    // println!("EE2");
+    // run_successful_command(&mut Command::new("curl").arg("https://local.vporton.name:8443/aa?arg=xx"))?;
+    // println!("EE3");
+    test_calls(&test, "/qq", "zz", "yu").await?;
     // TODO
     Ok(())
 }

@@ -1487,9 +1487,9 @@ dependencies = [
 
 [[package]]
 name = "ic-agent"
-version = "0.35.0"
+version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f08d1b54f1834fb9637a57855f1d87bb9dbec7a9dec09499737580692829cb0"
+checksum = "ba85280257d8663adef20bf5c043b287b3a283d4f916073eb3ca9166a4a59d4b"
 dependencies = [
  "async-lock",
  "backoff",
@@ -1540,9 +1540,9 @@ dependencies = [
 
 [[package]]
 name = "ic-transport-types"
-version = "0.35.0"
+version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1c68959f501cfcb79319b6720fd1903a661d77b503e6128bfce31f91ad87aca"
+checksum = "ce14c068bd053c0f5ab525326f3f358f265cdfcae279fbf6461fb529e9682acd"
 dependencies = [
  "candid",
  "hex",
@@ -2547,9 +2547,9 @@ checksum = "61697e0a1c7e512e84a621326239844a24d8207b4669b41bc18b32ea5cbf988b"
 
 [[package]]
 name = "serde"
-version = "1.0.202"
+version = "1.0.203"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "226b61a0d411b2ba5ff6d7f73a476ac4f8bb900373459cd00fab8512828ba395"
+checksum = "7253ab4de971e72fb7be983802300c30b5a7f0c2e56fab8abfc6a214307c0094"
 dependencies = [
  "serde_derive",
 ]
@@ -2575,9 +2575,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.202"
+version = "1.0.203"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6048858004bcff69094cd972ed40a32500f153bd3be9f716b2eed2e8217c4838"
+checksum = "500cbc0ebeb6f46627f50f3f5811ccf6bf00643be300b4c3eabc0ef55dc5b5ba"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2853,6 +2853,7 @@ dependencies = [
  "log",
  "rustls 0.23.8",
  "rustls-pemfile",
+ "serde",
  "thiserror",
 ]
 

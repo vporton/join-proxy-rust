@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::{fs::File, io::BufReader};
 use std::vec::Vec;
 
@@ -10,13 +9,17 @@ use rustls_pemfile::{certs, pkcs8_private_keys};
 use actix_web::{body::MessageBody, web::{self, Query}, App, HttpRequest, HttpResponse, HttpServer};
 use log::info;
 use anyhow::anyhow;
+use serde::Deserialize;
 
-// Can `args` be simplified?
-async fn test_page(req: HttpRequest, args: Query<HashMap<String, String>>, body: web::Bytes) -> Result<HttpResponse, Box<(dyn std::error::Error + 'static)>> {
-    let arg = args.get("arg").map(|s| s.clone()).unwrap_or_default();
-    let b = body.try_into_bytes().unwrap();
-    let res = format!("path={}&arg={}&body={}", req.uri().path(), arg, String::from_utf8(Vec::from(&*b))?); // TODO: Body is for POST.
-    info!("Test server serving: {}", res);
+#[derive(Deserialize)]
+struct TestServerArgs {
+    arg: String,
+}
+
+async fn test_page(req: HttpRequest, args: Query<TestServerArgs>, body: web::Bytes) -> Result<HttpResponse, Box<(dyn std::error::Error + 'static)>> {
+    let b = body.try_into_bytes().or_else(|_| Err(anyhow!("cannot read body")))?;
+    let res = format!("path={}&arg={}&body={}", req.uri().path(), args.arg, String::from_utf8(Vec::from(&*b))?);
+    info!("Test server serving: {}", req.uri().path_and_query().ok_or_else(|| anyhow!("error in path or query"))?);
     Ok(HttpResponse::Ok()
         .content_type("text/plain")
         .body(res))
@@ -50,8 +53,10 @@ async fn main() -> anyhow::Result<()> {
     HttpServer::new(|| {
         App::new().service(
             web::scope("/{_:.*}")
-                .route("", web::get().to(test_page))
-                .route("/{tail:.*}", web::get().to(test_page))
+            .route("", web::get().to(test_page))
+            .route("", web::post().to(test_page))
+            .route("/{tail:.*}", web::get().to(test_page))
+            .route("/{tail:.*}", web::post().to(test_page))
         )
     })
         .bind_rustls_0_23(
