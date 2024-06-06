@@ -87,7 +87,7 @@ fn deserialize_http_response(data: &[u8]) -> anyhow::Result<actix_web::HttpRespo
 
     let headers = response.headers_mut();
     for header_str in headers_bytes.split(|&c| c == b'\r') {
-        let mut iter2 = header_str.splitn(2, |&c| c == b'\r');
+        let mut iter2 = header_str.splitn(2, |&c| c == b'\t');
         let k = iter2.next().ok_or_else(|| MyCorruptedDBError::default())?;
         let v = iter2.next().ok_or_else(|| MyCorruptedDBError::default())?;
         headers.append(http_for_actix::HeaderName::from_bytes(k)?, http_for_actix::HeaderValue::from_bytes(v)?);
