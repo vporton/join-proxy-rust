@@ -102,7 +102,7 @@ struct HttpHeader {
 async fn test_calls<'a>(test: &'a OurDFX<'a>, path: &str, arg: &str, body: &str) -> Result<Vec<HttpHeader>, Box<dyn std::error::Error>> {
     let res =
         test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&path, &arg, &body)?)
-            .call_and_wait().await?;//.context("Call to IC.")?;
+            .call_and_wait().await.context("Call to IC.")?;
     let (text, headers) = Decode!(&res, String, Vec<HttpHeader>).context("Decoding test call response.")?;
     assert_eq!(
         text,
