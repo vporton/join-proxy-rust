@@ -32,8 +32,8 @@ actor HttpCaller {
     };
 
     system func inspect({
-        caller : Principal;
-        arg : Blob;
+        // caller : Principal;
+        // arg : Blob;
         msg : {
             #callHttp : () ->
                 (Http.WrappedHttpRequest,
