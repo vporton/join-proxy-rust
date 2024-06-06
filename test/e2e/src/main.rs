@@ -1,11 +1,11 @@
 use std::{fs::{read_to_string, write, File}, path::{Path, PathBuf}, process::Command, time::Duration};
 
-use candid::{Decode, Encode};
+use candid::{CandidType, Decode, Deserialize, Encode};
 use ic_agent::{export::Principal, Agent};
 use like_shell::{run_successful_command, temp_dir_from_template, Capture, TemporaryChild};
 // use dotenv::dotenv;
 use tempdir::TempDir;
-use tokio::time::sleep;
+use tokio::{join, time::sleep};
 use toml_edit::{value, DocumentMut};
 use anyhow::Context;
 use serde_json::Value;
@@ -93,17 +93,22 @@ impl<'a> Drop for OurDFX<'a> {
     }
 }
 
-async fn test_calls<'a>(test: &'a OurDFX<'a>, path: &str, arg: &str, body: &str) -> Result<(), Box<dyn std::error::Error>> {
+#[derive(Debug, Deserialize, CandidType)]
+struct HttpHeader {
+    name: String,
+    value: String,
+}
+
+async fn test_calls<'a>(test: &'a OurDFX<'a>, path: &str, arg: &str, body: &str) -> Result<Vec<HttpHeader>, Box<dyn std::error::Error>> {
     let res =
         test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&path, &arg, &body)?)
             .call_and_wait().await?;//.context("Call to IC.")?;
-    // println!("[[{:?}]]", res.map(|s| String::from_utf8_lossy(&s).to_string())); // TODO: Remove.
+    let (text, headers) = Decode!(&res, String, Vec<HttpHeader>).context("Decoding test call response.")?;
     assert_eq!(
-        Decode!(&res, String).context("Decoding test call response.")?,
+        text,
         format!("path={}&arg={}&body={}", path, arg, body),
     );
-    // TODO: Check two/three parallel requests.
-    Ok(())
+    Ok(headers)
 }
 
 #[tokio::main]
@@ -149,6 +154,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     test_calls(&dfx, "/ax", "b", "c").await?;
     test_calls(&dfx, "/ax", "bx", "c").await?;
     test_calls(&dfx, "/ax", "bx", "cx").await?;
+
+    let (headers1, headers2, headers3) = join!(
+        test_calls(&dfx, "/same", "x", "y"),
+        test_calls(&dfx, "/same", "x", "y"),
+        test_calls(&dfx, "/same", "x", "y"),
+    );
+    let headers1 = headers1?;
+    let headers2 = headers2?;
+    let headers3 = headers3?;
+    println!("LL: {:?}", &headers1); // FIXME: Remove.
+
+    let (mut hit_count, mut miss_count) = (0, 0);
+    for headers in [&headers1, &headers2, &headers3] {
+        if headers.iter().any(|h| h.name == "X-JoinProxy-Response" && h.value == "Hit") {
+            hit_count += 1;
+        }
+        if headers.iter().any(|h| h.name == "X-JoinProxy-Response" && h.value == "Miss") {
+            miss_count += 1;
+        }
+    }
+    assert_eq!(miss_count, 1);
+    assert_eq!(hit_count, 2);
 
     Ok(())
 }

@@ -933,6 +933,7 @@ dependencies = [
  "candid",
  "ic-agent",
  "like-shell",
+ "serde",
  "serde_json",
  "tempdir",
  "tokio",

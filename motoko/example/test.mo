@@ -5,12 +5,14 @@ import Debug "mo:base/Debug";
 import Text "mo:base/Text";
 
 actor Test {
-    public shared func test(path: Text, arg: Text, body: Text): async Text {
+    public shared func test(path: Text, arg: Text, body: Text)
+        : async (Text, [{name: Text; value: Text}])
+    {
         let headers = Http.headersNew();
         headers.put("Host", ["local.vporton.name:8081"]); // overrides the default // TODO: shorthand for Host header
         // Add arbitrary headers for testing:
         headers.put("Content-Type", ["text/plain"]);
-        headers.put("X-My", ["my"]); // FIXME: test https://forum.dfinity.org/t/apparently-broken-handling-of-same-named-http-headers-in-outcalls/31548
+        headers.put("X-My", ["my"]);
         let res = await Call.callHttp(
             {
                 url = "https://local.vporton.name:8443" # path # "?arg=" # arg;
@@ -30,6 +32,6 @@ actor Test {
         let ?resp_body = Text.decodeUtf8(Blob.fromArray(res.body)) else {
             Debug.trap("can't decode response body.")
         };
-        resp_body;
+        (resp_body, res.headers);
     };
 };
