@@ -182,7 +182,6 @@ async fn proxy(
         // Second level of defence: Ask back the calling canister.
         // Do it only once per outcall (our response content isn't secure anyway).
         if let (Some(agent), Some(callback)) = (&state.agent, &config.callback) {
-            // sleep(callback.pause_before_first_call).await;
             info!("Callback...");
             let res = agent.update(&callback.canister, &callback.func)
                 .with_arg(Encode!(&actix_request_hash.as_slice())?).call_and_wait().await;

@@ -16,10 +16,6 @@ key_file = "localhost.decrypted.key"
 [callback]
 canister = "aaaaa-aa" # will be overwitten
 func = "checkRequest"
-# TODO: Add to README:
-pause_before_first_call = "600ms"
-pause_between_calls = "900ms"
-timing_out_calls_after = "5s"
 
 [cache]
 cache_timeout = "1m" # How long responses are cached. See for format: https://chatgpt.com/share/4fb8f7c9-ad48-4cfe-a875-efcb6d36bbf1
