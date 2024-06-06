@@ -54,11 +54,9 @@ impl<'a> OurDFX<'a> {
         ).context("Reading port.")?;
         let port: u16 = port_str.parse().context("Parsing port number.")?;
 
-        println!("Connecting to DFX (port {port})");
         run_successful_command(Command::new(
             "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
         ).args(["deploy"]))?;
-        // dotenv().ok();
 
         let canister_ids: Value = {
             let dir = base.dir.path().join(".dfx").join("local").join("canister_ids.json");
@@ -117,21 +115,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _test_http = TemporaryChild::spawn(&mut Command::new(
         test.workspace_dir.join("target").join("debug").join("test-server")
     ), Capture { stdout: None, stderr: None }).context("Running test HTTPS server")?;
-    let _proxy = TemporaryChild::spawn(&mut Command::new(
-        test.workspace_dir.join("target").join("debug").join("joining-proxy")
-    ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
-    sleep(Duration::from_millis(2000)).await; // Wait till daemons start.
+    sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
 
     // Test both small and bigartificial delay:
     {
         let dfx = OurDFX::new(&test, &["--artificial-delay", "0"]).await?;
+        let _proxy = TemporaryChild::spawn(&mut Command::new(
+            test.workspace_dir.join("target").join("debug").join("joining-proxy")
+        ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
         test_calls(&dfx, "/qq", "zz", "yu").await?;
     }
     {
-        let dfx = OurDFX::new(&test, &["--artificial-delay", "5000"]).await?;
+        let dfx = OurDFX::new(&test, &["--artificial-delay", "5000", "--clean"]).await?;
+        let _proxy = TemporaryChild::spawn(&mut Command::new(
+            test.workspace_dir.join("target").join("debug").join("joining-proxy")
+        ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
+        run_successful_command(Command::new(
+            "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
+        ).args(["deploy"]))?;
         test_calls(&dfx, "/qq", "zz", "yu").await?;
     }
 
-    // TODO: Test that varying every one of three step parameters causes Miss.
+    let dfx = OurDFX::new(&test, &["--artificial-delay", "0", "--clean"]).await?; // --artificial-delay just to speed up tests
+    let _proxy = TemporaryChild::spawn(&mut Command::new(
+        test.workspace_dir.join("target").join("debug").join("joining-proxy")
+    ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
+    run_successful_command(Command::new(
+        "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
+    ).args(["deploy"]))?;
+
+    // Test that varying every one of three step parameters causes Miss:
+    test_calls(&dfx, "/a", "b", "c").await?;
+    test_calls(&dfx, "/ax", "b", "c").await?;
+    test_calls(&dfx, "/ax", "bx", "c").await?;
+    test_calls(&dfx, "/ax", "bx", "cx").await?;
+
     Ok(())
 }
