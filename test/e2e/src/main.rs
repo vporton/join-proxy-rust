@@ -33,19 +33,17 @@ impl Test {
 }
 
 // TODO: Should have more abstract DFXDir.
-struct OurDFX {
-    pub base: Test,
+struct OurDFX<'a> {
+    pub base: &'a Test,
     test_canister_id: Principal,
     agent: Agent,
 }
 
-impl OurDFX {
-    pub async fn new(tmpl_dir: &Path, additional_args: &[&str]) -> Result<Self, Box<dyn std::error::Error>> {
-        let base = Test::new(tmpl_dir).await?;
-
+impl<'a> OurDFX<'a> {
+    pub async fn new(base: &'a Test, additional_args: &[&str]) -> Result<Self, Box<dyn std::error::Error>> {
         // TODO: Specifying a specific port is a hack.
         run_successful_command(&mut Command::new(
-            "/root/.local/share/dfx/bin/dfx" // TODO: Split path.
+            "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
         ).args([&["start", "--host", "127.0.0.1:8007", "--background"] as &[&str], additional_args].concat()).current_dir(base.dir.path()))
             .context("Starting DFX")?;
 
@@ -56,13 +54,13 @@ impl OurDFX {
 
         println!("Connecting to DFX (port {port})");
         run_successful_command(Command::new(
-            "/root/.local/share/dfx/bin/dfx" // TODO: Split path.
+            "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
         ).args(["deploy"]))?;
         // dotenv().ok();
 
         let canister_ids: Value = {
-            let path = base.dir.path().join(".dfx").join("local").join("canister_ids.json");
-            let file = File::open(path).with_context(|| format!("Opening canister_ids.json"))?;
+            let dir = base.dir.path().join(".dfx").join("local").join("canister_ids.json");
+            let file = File::open(dir).with_context(|| format!("Opening canister_ids.json"))?;
             serde_json::from_reader(file).expect("Error parsing JSON")
         };
         let test_canister_id = canister_ids.as_object().unwrap()["test"].as_object().unwrap()["local"].as_str().unwrap();
@@ -78,7 +76,7 @@ impl OurDFX {
         write(&toml_path, doc.to_string()).context("Writing modified config.")?;
 
         Ok(Self {
-            base,
+            base: &base,
             test_canister_id: Principal::from_text(test_canister_id)
                 .context("Parsing principal")?,
             agent,
@@ -86,7 +84,7 @@ impl OurDFX {
     }
 }
 
-impl Drop for OurDFX {
+impl<'a> Drop for OurDFX<'a> {
     fn drop(&mut self) {
         run_successful_command(&mut Command::new(
             "/root/.local/share/dfx/bin/dfx" // TODO: Split path.
@@ -95,7 +93,7 @@ impl Drop for OurDFX {
     }
 }
 
-async fn test_calls(test: &OurDFX, path: &str, arg: &str, body: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn test_calls<'a>(test: &'a OurDFX<'a>, path: &str, arg: &str, body: &str) -> Result<(), Box<dyn std::error::Error>> {
     let res =
         test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&path, &arg, &body)?)
             .call_and_wait().await?;//.context("Call to IC.")?;
@@ -113,20 +111,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cargo_manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let tmpl_dir = cargo_manifest_dir.join("tmpl");
 
-    let test = OurDFX::new(&tmpl_dir, &[]).await?;
+    let test = Test::new(&tmpl_dir).await?;
+    let dfx = OurDFX::new(&test, &[]).await?;
     let _test_http = TemporaryChild::spawn(&mut Command::new(
-        test.base.workspace_dir.join("target").join("debug").join("test-server")
+        dfx.base.workspace_dir.join("target").join("debug").join("test-server")
     ), Capture { stdout: None, stderr: None }).context("Running test HTTPS server")?;
     let _proxy = TemporaryChild::spawn(&mut Command::new(
-        test.base.workspace_dir.join("target").join("debug").join("joining-proxy")
-    ).current_dir(test.base.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
+        dfx.base.workspace_dir.join("target").join("debug").join("joining-proxy")
+    ).current_dir(dfx.base.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
     sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
     // println!("EE1");
     // run_successful_command(&mut Command::new("curl").arg("https://local.vporton.name:8081/aa?arg=xx"))?;
     // println!("EE2");
     // run_successful_command(&mut Command::new("curl").arg("https://local.vporton.name:8443/aa?arg=xx"))?;
     // println!("EE3");
-    test_calls(&test, "/qq", "zz", "yu").await?;
+    test_calls(&dfx, "/qq", "zz", "yu").await?;
     // TODO: Test with `--artificial-delay 0` and `--artificial-delay 5000`.
     // TODO: Test that varying every one of three step parameters causes Miss.
     Ok(())
