@@ -14,7 +14,7 @@ key_file = "localhost.decrypted.key"
 
 # FIXME: Uncomment.
 [callback]
-canister = "aaaa-aa" # random (will be overwitten)
+canister = "aaaaa-aa" # will be overwitten
 func = "checkRequest"
 # TODO: Add to README:
 pause_before_first_call = "600ms"
