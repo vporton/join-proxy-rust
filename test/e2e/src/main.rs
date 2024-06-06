@@ -114,21 +114,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tmpl_dir = cargo_manifest_dir.join("tmpl");
 
     let test = Test::new(&tmpl_dir).await?;
-    let dfx = OurDFX::new(&test, &[]).await?;
     let _test_http = TemporaryChild::spawn(&mut Command::new(
-        dfx.base.workspace_dir.join("target").join("debug").join("test-server")
+        test.workspace_dir.join("target").join("debug").join("test-server")
     ), Capture { stdout: None, stderr: None }).context("Running test HTTPS server")?;
     let _proxy = TemporaryChild::spawn(&mut Command::new(
-        dfx.base.workspace_dir.join("target").join("debug").join("joining-proxy")
-    ).current_dir(dfx.base.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
-    sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
-    // println!("EE1");
-    // run_successful_command(&mut Command::new("curl").arg("https://local.vporton.name:8081/aa?arg=xx"))?;
-    // println!("EE2");
-    // run_successful_command(&mut Command::new("curl").arg("https://local.vporton.name:8443/aa?arg=xx"))?;
-    // println!("EE3");
-    test_calls(&dfx, "/qq", "zz", "yu").await?;
-    // TODO: Test with `--artificial-delay 0` and `--artificial-delay 5000`.
+        test.workspace_dir.join("target").join("debug").join("joining-proxy")
+    ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
+    sleep(Duration::from_millis(2000)).await; // Wait till daemons start.
+
+    // Test both small and bigartificial delay:
+    {
+        let dfx = OurDFX::new(&test, &["--artificial-delay", "0"]).await?;
+        test_calls(&dfx, "/qq", "zz", "yu").await?;
+    }
+    {
+        let dfx = OurDFX::new(&test, &["--artificial-delay", "5000"]).await?;
+        test_calls(&dfx, "/qq", "zz", "yu").await?;
+    }
+
     // TODO: Test that varying every one of three step parameters causes Miss.
     Ok(())
 }
