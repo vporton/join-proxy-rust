@@ -26,11 +26,11 @@ actor Test {
                 timeout = 60_000_000_000; // 60 sec
             },
         );
-        if (res.status != 200) {
-            Debug.trap("invalid response from proxy ");
-        };
         let ?resp_body = Text.decodeUtf8(Blob.fromArray(res.body)) else {
             Debug.trap("can't decode response body.")
+        };
+        if (res.status != 200) {
+            Debug.trap("invalid response from proxy: " # resp_body);
         };
         (resp_body, res.headers);
     };
