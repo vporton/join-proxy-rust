@@ -28,7 +28,7 @@ actor Test {
             Debug.trap("invalid response from proxy ");
         };
         let ?resp_body = Text.decodeUtf8(Blob.fromArray(res.body)) else {
-            Debug.trap("No response body.")
+            Debug.trap("can't decode response body.")
         };
         resp_body;
     };
