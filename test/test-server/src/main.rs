@@ -1,6 +1,7 @@
 use std::{fs::File, io::BufReader};
 use std::vec::Vec;
 
+use clap::Parser;
 use derive_more::From;
 use thiserror::Error;
 use anyhow::Context;
@@ -9,7 +10,14 @@ use rustls_pemfile::{certs, pkcs8_private_keys};
 use actix_web::{body::MessageBody, web::{self, Query}, App, HttpRequest, HttpResponse, HttpServer};
 use log::info;
 use anyhow::anyhow;
-use serde::Deserialize;
+use serde_derive::Deserialize;
+
+#[derive(clap::Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Flags {
+    #[arg(short, long = "config", default_value = "8081")]
+    port: u16,
+}
 
 #[derive(Deserialize)]
 struct TestServerArgs {
@@ -20,6 +28,16 @@ async fn test_page(req: HttpRequest, args: Query<TestServerArgs>, body: web::Byt
     let b = body.try_into_bytes().or_else(|_| Err(anyhow!("cannot read body")))?;
     let res = format!("path={}&arg={}&body={}", req.uri().path(), args.arg, String::from_utf8(Vec::from(&*b))?);
     info!("Test server serving: {}", req.uri().path_and_query().ok_or_else(|| anyhow!("error in path or query"))?);
+    Ok(HttpResponse::Ok()
+        .content_type("text/plain")
+        .body(res))
+}
+
+async fn return_headers(req: HttpRequest) -> Result<HttpResponse, Box<(dyn std::error::Error + 'static)>> {
+    let mut res = "".to_string();
+    for (k, v) in req.headers() {
+        res += format!("{}: {}\n", k.as_str(), v.to_str()?).as_str();
+    }
     Ok(HttpResponse::Ok()
         .content_type("text/plain")
         .body(res))
@@ -43,6 +61,8 @@ impl From<anyhow::Error> for MyError {
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
+    let args = Flags::parse();
+
     let cert_file = &mut BufReader::new(File::open("localhost.crt").context("Can't read HTTPS cert.")?);
     let key_file = &mut BufReader::new(File::open("localhost.decrypted.key").context("Can't read HTTPS key.")?);
     let cert_chain = certs(cert_file).collect::<Result<Vec<_>, _>>()
@@ -51,16 +71,19 @@ async fn main() -> anyhow::Result<()> {
         .next().transpose()?.ok_or(anyhow!("No private key in the file."))?;
 
     HttpServer::new(|| {
-        App::new().service(
-            web::scope("/{_:.*}")
-            .route("", web::get().to(test_page))
-            .route("", web::post().to(test_page))
-            .route("/{tail:.*}", web::get().to(test_page))
-            .route("/{tail:.*}", web::post().to(test_page))
+        App::new()
+            .route("/headers", web::get().to(return_headers))
+            .service(
+                // Define the general routes within a scope
+                web::scope("/{_:.*}")
+                    .route("", web::get().to(test_page))
+                    .route("", web::post().to(test_page))
+                    .route("/{tail:.*}", web::get().to(test_page))
+                    .route("/{tail:.*}", web::post().to(test_page))
         )
     })
         .bind_rustls_0_23(
-            "local.vporton.name:8081",
+            format!("local.vporton.name:{}", args.port),
             ServerConfig::builder().with_no_client_auth()
                 .with_single_cert(cert_chain, rustls::pki_types::PrivateKeyDer::Pkcs8(key))?
         )?

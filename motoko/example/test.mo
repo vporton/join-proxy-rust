@@ -5,17 +5,19 @@ import Debug "mo:base/Debug";
 import Text "mo:base/Text";
 
 actor Test {
-    public shared func test(path: Text, arg: Text, body: Text)
+    public shared func test(path: Text, arg: Text, body: Text, port: Text, noHost: Bool)
         : async (Text, [{name: Text; value: Text}])
     {
         let headers = Http.headersNew();
-        headers.put("Host", ["local.vporton.name:8081"]); // overrides the default // TODO: shorthand for Host header
+        if (not noHost) {
+            headers.put("Host", ["local.vporton.name:8081"]); // overrides the default // TODO: shorthand for Host header
+        };
         // Add arbitrary headers for testing:
         headers.put("Content-Type", ["text/plain"]);
         headers.put("X-My", ["my"]);
         let res = await Call.callHttp(
             {
-                url = "https://local.vporton.name:8443" # path # "?arg=" # arg;
+                url = "https://local.vporton.name:" # port # path # "?arg=" # arg;
                 headers = headers.share();
                 body = Text.encodeUtf8(body);
                 method = #post;

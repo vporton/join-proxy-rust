@@ -101,7 +101,7 @@ struct HttpHeader {
 
 async fn test_calls<'a>(test: &'a OurDFX<'a>, path: &str, arg: &str, body: &str) -> Result<Vec<HttpHeader>, Box<dyn std::error::Error>> {
     let res =
-        test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&path, &arg, &body)?)
+        test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&path, &arg, &body, &"8443", &false)?)
             .call_and_wait().await.context("Call to IC.")?;
     let (text, headers) = Decode!(&res, String, Vec<HttpHeader>).context("Decoding test call response.")?;
     assert_eq!(
@@ -141,40 +141,66 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         test_calls(&dfx, "/qq", "zz", "yu").await?;
     }
 
-    let dfx = OurDFX::new(&test, &["--artificial-delay", "0", "--clean"]).await?; // --artificial-delay just to speed up tests
-    let _proxy = TemporaryChild::spawn(&mut Command::new(
-        test.workspace_dir.join("target").join("debug").join("joining-proxy")
-    ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
-    run_successful_command(Command::new(
-        "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
-    ).args(["deploy"]))?;
+    {
+        let dfx = OurDFX::new(&test, &["--artificial-delay", "0", "--clean"]).await?; // --artificial-delay just to speed up tests
+        let _proxy = TemporaryChild::spawn(&mut Command::new(
+            test.workspace_dir.join("target").join("debug").join("joining-proxy")
+        ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
+        run_successful_command(Command::new(
+            "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
+        ).args(["deploy"]))?;
 
-    // Test that varying every one of three step parameters causes Miss:
-    test_calls(&dfx, "/a", "b", "c").await?;
-    test_calls(&dfx, "/ax", "b", "c").await?;
-    test_calls(&dfx, "/ax", "bx", "c").await?;
-    test_calls(&dfx, "/ax", "bx", "cx").await?;
+        // Test that varying every one of three step parameters causes Miss:
+        test_calls(&dfx, "/a", "b", "c").await?;
+        test_calls(&dfx, "/ax", "b", "c").await?;
+        test_calls(&dfx, "/ax", "bx", "c").await?;
+        test_calls(&dfx, "/ax", "bx", "cx").await?;
 
-    let (headers1, headers2, headers3) = join!(
-        test_calls(&dfx, "/same", "x", "y"),
-        test_calls(&dfx, "/same", "x", "y"),
-        test_calls(&dfx, "/same", "x", "y"),
-    );
-    let headers1 = headers1?;
-    let headers2 = headers2?;
-    let headers3 = headers3?;
+        let (headers1, headers2, headers3) = join!(
+            test_calls(&dfx, "/same", "x", "y"),
+            test_calls(&dfx, "/same", "x", "y"),
+            test_calls(&dfx, "/same", "x", "y"),
+        );
+        let headers1 = headers1?;
+        let headers2 = headers2?;
+        let headers3 = headers3?;
 
-    let (mut hit_count, mut miss_count) = (0, 0);
-    for headers in [&headers1, &headers2, &headers3] {
-        if headers.iter().any(|h| h.name == "x-joinproxy-response" && h.value == "Hit") {
-            hit_count += 1;
+        let (mut hit_count, mut miss_count) = (0, 0);
+        for headers in [&headers1, &headers2, &headers3] {
+            if headers.iter().any(|h| h.name == "x-joinproxy-response" && h.value == "Hit") {
+                hit_count += 1;
+            }
+            if headers.iter().any(|h| h.name == "x-joinproxy-response" && h.value == "Miss") {
+                miss_count += 1;
+            }
         }
-        if headers.iter().any(|h| h.name == "x-joinproxy-response" && h.value == "Miss") {
-            miss_count += 1;
-        }
+        assert_eq!(miss_count, 1);
+        assert_eq!(hit_count, 2);
     }
-    assert_eq!(miss_count, 1);
-    assert_eq!(hit_count, 2);
+
+    {
+        let dfx = OurDFX::new(&test, &["--artificial-delay", "0", "--clean"]).await?; // --artificial-delay just to speed up tests
+        let _proxy = TemporaryChild::spawn(&mut Command::new(
+            test.workspace_dir.join("target").join("debug").join("joining-proxy")
+        ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
+        run_successful_command(Command::new(
+            "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
+        ).args(["deploy"]))?;
+        let _test_http2 = TemporaryChild::spawn(&mut Command::new(
+            test.workspace_dir.join("target").join("debug").join("test-server")
+        ).args(["-p", "443"]), Capture { stdout: None, stderr: None }).context("Running test HTTPS server")?;
+        sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
+
+        // Check https://local.vporton.name vs https://local.vporton.name:443
+        let res =
+            dfx.agent.update(&dfx.test_canister_id, "test").with_arg(Encode!(&"/headers", &"", &"", &"443", &true)?)
+                .call_and_wait().await.context("Call to IC 2.")?;
+        let (text, _headers) = Decode!(&res, String, Vec<HttpHeader>).context("Decoding test call response.")?;
+        println!("[[{text}]]");
+        assert!(
+            text.contains("host: local.vporton.name:443\n"),
+        );
+   }
 
     Ok(())
 }
