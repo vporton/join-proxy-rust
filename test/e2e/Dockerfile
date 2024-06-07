@@ -8,7 +8,7 @@ ENV PATH=$HOME/.local/share/dfx/bin:$PATH
 RUN $HOME/.local/share/dfx/bin/dfxvm default 0.20.0
 
 RUN apt-get update
-RUN apt-get install -y openssl npm libunwind8
+RUN apt-get install -y openssl npm libunwind8 tini
 
 RUN npm i -g ic-mops
 
@@ -48,8 +48,15 @@ COPY dfx.json test/e2e/tmpl/
 COPY motoko test/e2e/tmpl/motoko
 COPY mops.toml test/e2e/tmpl/
 
-RUN cargo build
+RUN cargo build -p joining-proxy
+RUN cargo build -p test-server
+RUN cargo test --no-run -p e2e
 RUN export PATH=$HOME/.local/share/dfx/bin:$PATH && dfx cache install
 RUN export PATH=$HOME/.local/share/dfx/bin:$PATH && cd test/e2e/tmpl/ && mops install
 
-CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=info && ./target/debug/e2e"
+# CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=info && ./target/debug/e2e"
+
+# to prevent reusing same ports.
+ENV RUST_TEST_THREADS=1
+
+ENTRYPOINT ["/usr/bin/tini", "--", "cargo", "test", "-p", "e2e", "--", "--nocapture"]
