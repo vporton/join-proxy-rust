@@ -11,15 +11,14 @@ pub struct Callback {
     pub func: String,
 }
 
-// TODO: Make optional
 #[derive(Clone, Deserialize, Debug)]
 pub struct UpstreamTimeouts {
-    #[serde(default="default_upstream_connect_timeout", deserialize_with = "parse_duration")]
-    pub connect_timeout: Duration,
-    #[serde(default="default_upstream_read_timeout", deserialize_with = "parse_duration")]
-    pub read_timeout: Duration,
-    #[serde(default="default_upstream_total_timeout", deserialize_with = "parse_duration")]
-    pub total_timeout: Duration,
+    #[serde(default="default_upstream_connect_timeout", deserialize_with = "parse_duration_option")]
+    pub connect_timeout: Option<Duration>,
+    #[serde(default="default_upstream_read_timeout", deserialize_with = "parse_duration_option")]
+    pub read_timeout: Option<Duration>,
+    #[serde(default="default_upstream_total_timeout", deserialize_with = "parse_duration_option")]
+    pub total_timeout: Option<Duration>,
 }
 
 #[derive(Clone, Deserialize, Debug)]
@@ -86,16 +85,16 @@ fn default_show_hit_miss() -> bool {
     true
 }
 
-fn default_upstream_connect_timeout() -> Duration {
-    Duration::from_secs(10)
+fn default_upstream_connect_timeout() -> Option<Duration> {
+    Some(Duration::from_secs(10))
 }
 
-fn default_upstream_read_timeout() -> Duration {
-    Duration::from_secs(60) // I set it big, for the use case of OpenAI API
+fn default_upstream_read_timeout() -> Option<Duration> {
+    Some(Duration::from_secs(60)) // I set it big, for the use case of OpenAI API
 }
 
-fn default_upstream_total_timeout() -> Duration {
-    Duration::from_secs(120) // I set it big, for the use case of OpenAI API
+fn default_upstream_total_timeout() -> Option<Duration> {
+    Some(Duration::from_secs(120)) // I set it big, for the use case of OpenAI API
 }
 
 fn default_add_forwarded_from_header() -> bool {
@@ -106,11 +105,10 @@ fn default_ic_local() -> bool {
     false
 }
 
-fn parse_duration<'de, D>(deserializer: D) -> Result<Duration, D::Error>
+fn extract_duration<'de, D>(s: &str) -> Result<Duration, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let s: String = serde::Deserialize::deserialize(deserializer)?;
     let pos = s.find(|c: char| !c.is_numeric()).unwrap_or(s.len());
     let (value_str, unit) = s.split_at(pos);
 
@@ -124,6 +122,26 @@ where
         "ms" => Ok(Duration::from_millis(value)),
         _ => Err(serde::de::Error::custom("Invalid duration unit")),
     }
+}
+
+fn parse_duration<'de, D>(deserializer: D) -> Result<Duration, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = serde::Deserialize::deserialize(deserializer)?;
+    extract_duration::<D>(s.as_str())
+}
+
+fn parse_duration_option<'de, D>(deserializer: D) -> Result<Option<Duration>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let opt: Option<String> = serde::Deserialize::deserialize(deserializer)?;
+    Ok(if let Some(s) = opt {
+        Some(extract_duration::<D>(s.as_str())?)
+    } else {
+        None
+    })
 }
 
 fn deserialize_canister_id<'de, D>(deserializer: D) -> Result<Principal, D::Error>

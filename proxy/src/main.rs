@@ -307,12 +307,18 @@ async fn main() -> anyhow::Result<()> {
     let (cert_file, key_file) = (config.serve.cert_file.clone(), config.serve.key_file.clone());
     let is_https = config.serve.https;
     let server = HttpServer::new(move || {
+        let mut builder = ClientBuilder::new();
+        if let Some(t) = config.upstream_timeouts.connect_timeout {
+            builder = builder.connect_timeout(t);
+        }
+        if let Some(t) = config.upstream_timeouts.read_timeout {
+            builder = builder.connect_timeout(t);
+        }
+        if let Some(t) = config.upstream_timeouts.total_timeout {
+            builder = builder.timeout(t);
+        }
         let state = State {
-            client: ClientBuilder::new()
-                .connect_timeout(config.upstream_timeouts.connect_timeout)
-                .read_timeout(config.upstream_timeouts.read_timeout)
-                .timeout(config.upstream_timeouts.total_timeout)
-                .build().unwrap(),
+            client: builder.build().unwrap(),
             additional_response_headers: additional_response_headers.clone(),
             response_headers_to_remove: response_headers_to_remove.clone(),
             agent: agent.clone(),
