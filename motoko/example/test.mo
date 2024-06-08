@@ -10,6 +10,7 @@ actor Test {
     {
         let headers = Http.headersNew();
         if (not noHost) {
+            // Remark: As test_port_443 test shows, port is included in default Host: iff it is included in the URL.
             headers.put("Host", ["local.vporton.name:8081"]); // overrides the default // TODO: shorthand for Host header
         };
         // Add arbitrary headers for testing:
@@ -17,7 +18,7 @@ actor Test {
         headers.put("X-My", ["my"]);
         let res = await Call.callHttp(
             {
-                url = "https://local.vporton.name:" # port # path # "?arg=" # arg;
+                url = "https://local.vporton.name" # port # path # "?arg=" # arg;
                 headers = headers.share();
                 body = Text.encodeUtf8(body);
                 method = #post;

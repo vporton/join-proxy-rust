@@ -72,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
 
     HttpServer::new(|| {
         App::new()
-            .route("/headers", web::get().to(return_headers))
+            .route("/headers", web::post().to(return_headers))
             .service(
                 // Define the general routes within a scope
                 web::scope("/{_:.*}")

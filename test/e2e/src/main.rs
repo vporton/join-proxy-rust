@@ -101,7 +101,7 @@ struct HttpHeader {
 
 async fn test_calls<'a>(test: &'a OurDFX<'a>, path: &str, arg: &str, body: &str) -> Result<Vec<HttpHeader>, Box<dyn std::error::Error>> {
     let res =
-        test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&path, &arg, &body, &"8443", &false)?)
+        test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&path, &arg, &body, &":8443", &false)?)
             .call_and_wait().await.context("Call to IC.")?;
     let (text, headers) = Decode!(&res, String, Vec<HttpHeader>).context("Decoding test call response.")?;
     assert_eq!(
@@ -109,6 +109,14 @@ async fn test_calls<'a>(test: &'a OurDFX<'a>, path: &str, arg: &str, body: &str)
         format!("path={}&arg={}&body={}", path, arg, body),
     );
     Ok(headers)
+}
+
+fn should_run(test: &str) -> bool {
+    let mut arguments = std::env::args().skip(1);
+    if arguments.len() == 0 {
+        return true;
+    }
+    arguments.any(|arg| test.contains(&arg))
 }
 
 #[tokio::main]
@@ -123,25 +131,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
 
     // Test both small and bigartificial delay:
-    {
-        let dfx = OurDFX::new(&test, &["--artificial-delay", "0"]).await?;
-        let _proxy = TemporaryChild::spawn(&mut Command::new(
-            test.workspace_dir.join("target").join("debug").join("joining-proxy")
-        ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
-        test_calls(&dfx, "/qq", "zz", "yu").await?;
-    }
-    {
-        let dfx = OurDFX::new(&test, &["--artificial-delay", "5000", "--clean"]).await?;
-        let _proxy = TemporaryChild::spawn(&mut Command::new(
-            test.workspace_dir.join("target").join("debug").join("joining-proxy")
-        ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
-        run_successful_command(Command::new(
-            "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
-        ).args(["deploy"]))?;
-        test_calls(&dfx, "/qq", "zz", "yu").await?;
+    if should_run("test_delay") {
+        {
+            let dfx = OurDFX::new(&test, &["--artificial-delay", "0"]).await?;
+            let _proxy = TemporaryChild::spawn(&mut Command::new(
+                test.workspace_dir.join("target").join("debug").join("joining-proxy")
+            ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
+            test_calls(&dfx, "/qq", "zz", "yu").await?;
+        }
+        {
+            let dfx = OurDFX::new(&test, &["--artificial-delay", "5000", "--clean"]).await?;
+            let _proxy = TemporaryChild::spawn(&mut Command::new(
+                test.workspace_dir.join("target").join("debug").join("joining-proxy")
+            ).current_dir(test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
+            run_successful_command(Command::new(
+                "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
+            ).args(["deploy"]))?;
+            test_calls(&dfx, "/qq", "zz", "yu").await?;
+        }
     }
 
-    {
+    if should_run("test_altering_args") {
         let dfx = OurDFX::new(&test, &["--artificial-delay", "0", "--clean"]).await?; // --artificial-delay just to speed up tests
         let _proxy = TemporaryChild::spawn(&mut Command::new(
             test.workspace_dir.join("target").join("debug").join("joining-proxy")
@@ -178,7 +188,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(hit_count, 2);
     }
 
-    {
+    if should_run("test_port_443") {
         let dfx = OurDFX::new(&test, &["--artificial-delay", "0", "--clean"]).await?; // --artificial-delay just to speed up tests
         let _proxy = TemporaryChild::spawn(&mut Command::new(
             test.workspace_dir.join("target").join("debug").join("joining-proxy")
@@ -193,10 +203,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Check https://local.vporton.name vs https://local.vporton.name:443
         let res =
-            dfx.agent.update(&dfx.test_canister_id, "test").with_arg(Encode!(&"/headers", &"", &"", &"443", &true)?)
+            dfx.agent.update(&dfx.test_canister_id, "test").with_arg(Encode!(&"/headers", &"", &"", &"", &true)?)
                 .call_and_wait().await.context("Call to IC 2.")?;
         let (text, _headers) = Decode!(&res, String, Vec<HttpHeader>).context("Decoding test call response.")?;
-        println!("[[{text}]]");
+        assert!(
+            text.contains("host: local.vporton.name\n"),
+        );
+            // local.vporton.name:443
+        let res =
+            dfx.agent.update(&dfx.test_canister_id, "test").with_arg(Encode!(&"/headers", &"", &"", &":443", &true)?)
+                .call_and_wait().await.context("Call to IC 2.")?;
+        let (text, _headers) = Decode!(&res, String, Vec<HttpHeader>).context("Decoding test call response.")?;
         assert!(
             text.contains("host: local.vporton.name:443\n"),
         );

@@ -52,4 +52,8 @@ RUN cargo build
 RUN export PATH=$HOME/.local/share/dfx/bin:$PATH && dfx cache install
 RUN export PATH=$HOME/.local/share/dfx/bin:$PATH && cd test/e2e/tmpl/ && mops install
 
-CMD sh -c "export PATH=$HOME/.local/share/dfx/bin:$PATH RUST_LOG=info && ./target/debug/e2e"
+ENV PATH=$HOME/.local/share/dfx/bin:$PATH
+ENV RUST_LOG=info
+
+ENTRYPOINT [ "./target/debug/e2e" ]
+CMD sh -c "export  && ./target/debug/e2e"
