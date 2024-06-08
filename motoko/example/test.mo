@@ -22,7 +22,7 @@ actor Test {
             },
             {
                 max_response_bytes = ?10_000;
-                cycles = 900_000_000_000; // TODO: much too much
+                cycles = 1_000_000_000;
                 timeout = 60_000_000_000; // 60 sec
             },
         );
