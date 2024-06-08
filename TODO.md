@@ -23,5 +23,3 @@ TODO:
     - Use Docker `ENTRYPOINT` to call cargo tests.
     
     - Output which test is running now.
-
-- Due to unknown problem with DFX, `can't stop DFX: Stopping DFX` at the end of the tests.

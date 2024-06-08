@@ -8,7 +8,7 @@ ENV PATH=$HOME/.local/share/dfx/bin:$PATH
 RUN $HOME/.local/share/dfx/bin/dfxvm default 0.20.0
 
 RUN apt-get update
-RUN apt-get install -y openssl npm libunwind8
+RUN apt-get install -y openssl npm libunwind8 tini
 
 RUN npm i -g ic-mops
 
@@ -55,5 +55,4 @@ RUN export PATH=$HOME/.local/share/dfx/bin:$PATH && cd test/e2e/tmpl/ && mops in
 ENV PATH=$HOME/.local/share/dfx/bin:$PATH
 ENV RUST_LOG=info
 
-ENTRYPOINT [ "./target/debug/e2e" ]
-CMD sh -c "export  && ./target/debug/e2e"
+ENTRYPOINT ["/usr/bin/tini", "./target/debug/e2e"]
