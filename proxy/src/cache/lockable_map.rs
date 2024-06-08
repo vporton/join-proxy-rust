@@ -29,45 +29,10 @@ impl<T> MutexGuard<T> for tokio::sync::MutexGuard<'_, T>
     }
 }
 
-// TODO: more abstract error handling
-// pub trait Mutex<T> {
-//     // fn get_mut(&mut self) -> LockResult<&mut T>; // not available for Redis
-//     // fn into_inner(self) -> T
-//     //     where
-//     //         T: Sized;
-//     // async fn lock(&self) -> impl MutexGuard<T>;
-//     // fn try_lock(&self) -> Result<impl MutexGuard<T>, TryLockError>;
-// }
-
-// impl<T> Mutex<T> for tokio::sync::Mutex<T>
-//     where T: std::marker::Send,
-// {
-//     fn into_inner(self) -> T
-//         where
-//             T: Sized
-//     {
-//         self.into_inner()
-//     }
-
-//     async fn lock(&self) -> impl MutexGuard<T> {
-//         self.lock().await
-//     }
-
-//     fn try_lock(&self) -> Result<impl MutexGuard<T>, TryLockError> {
-//         self.try_lock()
-//     }
-// }
-
 pub trait AbstractLockableMap<K, V> {
     type Guard<'a>: MutexGuard<Option<V>> where Self: 'a;
 
     async fn lock(&mut self, key: &K) -> Self::Guard<'_>;
-
-    // fn insert(&mut self, key: K, value: V);
-
-    // fn get(&self, key: &K) -> Option<Self::Guard> {
-    //     self.map.get(key).map(|mutex| mutex.lock().unwrap())
-    // }
 
     async fn remove(&mut self, key: &K);
 }
