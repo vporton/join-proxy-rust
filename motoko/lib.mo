@@ -163,8 +163,9 @@ module {
             let the_rest = Itertools.skip(request.url.chars(), 8); // strip "https://"
             // We don't worry if request.url really starts with "https://" because it will be caught later.
             let host = Itertools.takeWhile<Char>(the_rest, func (c: Char) { c != '/' });
+            // As test_port_443 test shows, port is included in default Host: iff it is included in the URL.
+            // So, we don't need add/remove :443 to match config on server.
             headers.put("host", [Text.fromIter(host)]);
-            // FIXME: Should port 443 be present in host?
         };
     };
 

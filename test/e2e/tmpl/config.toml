@@ -25,7 +25,7 @@ read_timeout = "30s"
 total_timeout = "60s"
 
 [request_headers]
-remove = ["user-agent", "accept"] # "parasitic" headers added by IC # FIXME: I marked them parasitic in error.
+remove = []
 add = []
 
 [response_headers]

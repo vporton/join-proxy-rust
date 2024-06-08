@@ -38,7 +38,7 @@ struct State {
 // Two similar functions with different data types follow:
 
 fn serialize_http_request(request: &actix_web::HttpRequest, url: &str, bytes: &actix_web::web::Bytes) -> anyhow::Result<Vec<u8>> {
-    // FIXME: Should convert headers to lowercase?
+    // Actix convert headers to lowercase.
     let mut headers = BTreeMap::new();
     for (k, v) in request.headers().into_iter() { // lexigraphical order
         let entry = headers.entry(k.as_str());
@@ -263,7 +263,6 @@ async fn main() -> anyhow::Result<()> {
         config.ic_url = Some("http://localhost:8000".to_string())
     }
 
-    // FIXME: "localhost:8081" binds only IPv4, in some reason.
     let server_url = config.serve.host.clone() + ":" + config.serve.port.to_string().as_str();
 
     let cache = Arc::new(Mutex::new(Box::new(BinaryMemCache::new(config.cache.cache_timeout))));

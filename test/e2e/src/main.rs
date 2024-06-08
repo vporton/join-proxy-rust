@@ -112,11 +112,11 @@ async fn test_calls<'a>(test: &'a OurDFX<'a>, path: &str, arg: &str, body: &str)
 }
 
 fn should_run(test: &str) -> bool {
-    let mut arguments = std::env::args().skip(1);
+    let arguments: Vec<String> = std::env::args().skip(1).collect();
     if arguments.len() == 0 {
         return true;
     }
-    arguments.any(|arg| test.contains(&arg))
+    arguments.into_iter().any(|arg| test.contains(&arg))
 }
 
 #[tokio::main]
