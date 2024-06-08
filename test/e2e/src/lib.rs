@@ -101,7 +101,7 @@ mod tests {
     
     async fn test_calls<'a>(test: &'a OurDFX<'a>, path: &str, arg: &str, body: &str) -> Result<Vec<HttpHeader>, Box<dyn std::error::Error>> {
         let res =
-            test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&path, &arg, &body, &":8443")?)
+            test.agent.update(&test.test_canister_id, "test").with_arg(Encode!(&path, &arg, &body, &":8443", &":8081")?)
                 .call_and_wait().await.context("Call to IC.")?;
         let (text, headers) = Decode!(&res, String, Vec<HttpHeader>).context("Decoding test call response.")?;
         assert_eq!(
@@ -226,7 +226,7 @@ mod tests {
 
         // Check https://local.vporton.name vs https://local.vporton.name:443
         let res =
-            dfx.agent.update(&dfx.test_canister_id, "test").with_arg(Encode!(&"/headers", &"", &"", &"")?)
+            dfx.agent.update(&dfx.test_canister_id, "test").with_arg(Encode!(&"/headers", &"", &"", &"", &"")?)
                 .call_and_wait().await.context("Call to IC 2.")?;
         let (text, _headers) = Decode!(&res, String, Vec<HttpHeader>).context("Decoding test call response.")?;
         assert!(
@@ -234,7 +234,7 @@ mod tests {
         );
             // local.vporton.name:443
         let res =
-            dfx.agent.update(&dfx.test_canister_id, "test").with_arg(Encode!(&"/headers", &"", &"", &":443")?)
+            dfx.agent.update(&dfx.test_canister_id, "test").with_arg(Encode!(&"/headers", &"", &"", &":443", &":443")?)
                 .call_and_wait().await.context("Call to IC 2.")?;
         let (text, _headers) = Decode!(&res, String, Vec<HttpHeader>).context("Decoding test call response.")?;
         assert!(

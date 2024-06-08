@@ -6,11 +6,11 @@ import Text "mo:base/Text";
 
 actor Test {
     // TODO: Remove `noHost`.
-    public shared func test(path: Text, arg: Text, body: Text, port: Text)
+    public shared func test(path: Text, arg: Text, body: Text, port: Text, port2: Text)
         : async (Text, [{name: Text; value: Text}])
     {
         // Remark: As test_port_443 test shows, port is included in default Host: iff it is included in the URL.
-        let headers = Http.headersNew("local.vporton.name:8081");
+        let headers = Http.headersNew("local.vporton.name" # port2);
         // Add arbitrary headers for testing:
         headers.put("Content-Type", ["text/plain"]);
         headers.put("X-My", ["my"]);
