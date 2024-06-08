@@ -5,14 +5,12 @@ import Debug "mo:base/Debug";
 import Text "mo:base/Text";
 
 actor Test {
-    public shared func test(path: Text, arg: Text, body: Text, port: Text, noHost: Bool)
+    // TODO: Remove `noHost`.
+    public shared func test(path: Text, arg: Text, body: Text, port: Text)
         : async (Text, [{name: Text; value: Text}])
     {
-        let headers = Http.headersNew();
-        if (not noHost) {
-            // Remark: As test_port_443 test shows, port is included in default Host: iff it is included in the URL.
-            headers.put("Host", ["local.vporton.name:8081"]); // overrides the default // TODO: shorthand for Host header
-        };
+        // Remark: As test_port_443 test shows, port is included in default Host: iff it is included in the URL.
+        let headers = Http.headersNew("local.vporton.name:8081");
         // Add arbitrary headers for testing:
         headers.put("Content-Type", ["text/plain"]);
         headers.put("X-My", ["my"]);

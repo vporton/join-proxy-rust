@@ -151,7 +151,7 @@ module {
 
         // Some headers are added automatically, if missing. Provide them here, to match the hash:
         if (request.body != "") {
-            headers.put("content-length", [xNum.toText(Array.size(Blob.toArray(request.body)))]); // TODO: Is it efficient?
+            headers.put("content-length", [xNum.toText(Array.size(Blob.toArray(request.body)))]); // TODO: https://github.com/dfinity/motoko-base/issues/637
         };
         if (Option.isNull(headers.get("user-agent"))) {
             headers.put("user-agent", ["IC/for-Join-Proxy"]);
@@ -207,7 +207,7 @@ module {
         transform: ?Types.TransformRawResponseFunction,
         params: {timeout: Nat; max_response_bytes: ?Nat64},
     ): async* Types.HttpResponsePayload {
-        let headers = headersNew();
+        let headers = _headersNew();
         headers.unshare(request.headers);
         await* checkedHttpRequest(
             checker,
@@ -222,7 +222,13 @@ module {
         );
     };
 
-    public func headersNew(): RBTree.RBTree<Text, [Text]> {
+    public func _headersNew(): RBTree.RBTree<Text, [Text]> {
         RBTree.RBTree<Text, [Text]>(Text.compare);
+    };
+
+    public func headersNew(host: Text): RBTree.RBTree<Text, [Text]> {
+        let headers = RBTree.RBTree<Text, [Text]>(Text.compare);
+        headers.put("Host", [host]);
+        headers
     };
 };
