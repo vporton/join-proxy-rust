@@ -12,10 +12,6 @@ TODO:
 
 - Incrementing nonce to avoid upstream request replay attack.
 
-- No need to hash the entire request, just the nonce.
-
-- Ensure using parking_lot Mutex rather than std any and `.future_lock()`.
-
 - If the proxy is directed to its own URL, will this work as a DoS attack?
 
 - Improve tests:
