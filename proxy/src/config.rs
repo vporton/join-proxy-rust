@@ -82,7 +82,7 @@ fn default_https() -> bool {
 }
 
 fn default_show_hit_miss() -> bool {
-    true
+    false
 }
 
 fn default_upstream_connect_timeout() -> Option<Duration> {

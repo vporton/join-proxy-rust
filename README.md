@@ -80,7 +80,7 @@ add = [["Authorization", "Bearer <OPENAI-API-KEY>"]] # add headers
 [response_headers]
 remove = ["Cookie"] # remove these headers
 add = [["Cookie", "userId=789"]] # add these headers
-show_hit_miss = false # true by default. Add `X-JoinProxy-Response: [Hit | Miss]` header
+show_hit_miss = false # false by default. Add `X-JoinProxy-Response: [Hit | Miss]` header
 add_forwarded_from_header = false # Add `X-Forwarded-From` useless but widespread HTTP header to the response
 ```
 
