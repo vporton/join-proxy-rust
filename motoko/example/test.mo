@@ -5,7 +5,6 @@ import Debug "mo:base/Debug";
 import Text "mo:base/Text";
 
 actor Test {
-    // TODO: Remove `noHost`.
     public shared func test(path: Text, arg: Text, body: Text, port: Text, port2: Text)
         : async (Text, [{name: Text; value: Text}])
     {
