@@ -149,7 +149,6 @@ mod tests {
                     workspace_dir.join("target").join("debug").join("test-server")
                 ), Capture { stdout: None, stderr: None }).await.context("Running test HTTPS server")?,
             };
-            sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
             Ok(res)
         }
     }
@@ -163,6 +162,7 @@ mod tests {
             let _proxy = TemporaryChild::spawn(&mut Command::new(
                 data.test.workspace_dir.join("target").join("debug").join("joining-proxy")
             ).current_dir(data.test.dir.path()), Capture { stdout: None, stderr: None }).await.context("Running Joining Proxy")?;
+            sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
             test_calls(&dfx, "/qq", "zz", "yu").await?;
         }
         {
@@ -174,6 +174,7 @@ mod tests {
             run_successful_command(Command::new(
                 "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
             ).args(["deploy"])).await?;
+            sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
             test_calls(&dfx, "/qq", "zz", "yu").await?;
         }
         Ok(())
@@ -189,6 +190,7 @@ mod tests {
         run_successful_command(Command::new(
             "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
         ).args(["deploy"])).await?;
+        sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
 
         // data.test that varying every one of three step parameters causes Miss:
         test_calls(&dfx, "/a", "b", "c").await?;
