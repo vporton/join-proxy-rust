@@ -87,7 +87,7 @@ mod tests {
     impl<'a> Drop for OurDFX<'a> {
         fn drop(&mut self) {
             run_successful_command(&mut Command::new(
-                "/root/.local/share/dfx/bin/dfx" // TODO: Split path.
+                "/root/.local/share/dfx/bin/dfx"
             ).args(["stop"]).current_dir(self.base.dir.path()))
                 .context("Stopping DFX").expect("can't stop DFX");
         }
@@ -143,7 +143,7 @@ mod tests {
                 mytest.test.workspace_dir.join("target").join("debug").join("joining-proxy")
             ).current_dir(mytest.test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
             run_successful_command(Command::new(
-                "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
+                "/root/.local/share/dfx/bin/dfx"
             ).args(["deploy"]))?;
             test_calls(&dfx, "/qq", "zz", "yu").await?;
             drop(dfx);
@@ -156,7 +156,7 @@ mod tests {
                 mytest.test.workspace_dir.join("target").join("debug").join("joining-proxy")
             ).current_dir(mytest.test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
             run_successful_command(Command::new(
-                "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
+                "/root/.local/share/dfx/bin/dfx"
             ).args(["deploy"]))?;
             test_calls(&dfx, "/qq", "zz", "yu").await?;
             drop(dfx);
@@ -173,7 +173,7 @@ mod tests {
             mytest.test.workspace_dir.join("target").join("debug").join("joining-proxy")
         ).current_dir(mytest.test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
         run_successful_command(Command::new(
-            "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
+            "/root/.local/share/dfx/bin/dfx"
         ).args(["deploy"]))?;
 
         // Test that varying every one of three step parameters causes Miss:
@@ -217,7 +217,7 @@ mod tests {
             mytest.test.workspace_dir.join("target").join("debug").join("joining-proxy")
         ).current_dir(mytest.test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
         run_successful_command(Command::new(
-            "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
+            "/root/.local/share/dfx/bin/dfx"
         ).args(["deploy"]))?;
         let _test_http2 = TemporaryChild::spawn(&mut Command::new(
             mytest.test.workspace_dir.join("target").join("debug").join("test-server")
