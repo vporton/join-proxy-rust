@@ -258,8 +258,10 @@ async fn main() -> anyhow::Result<()> {
     let mut config: Config = toml::from_str(&config_string)
         .map_err(|e| anyhow!("Cannot read config file {}: {}", args.config_file, e))?;
 
-    if config.ic_url.is_none() && config.ic_local {
-        config.ic_url = Some("http://localhost:8000".to_string())
+    if let Some(callback) = &mut config.callback {
+        if callback.ic_url.is_none() && callback.ic_local {
+            callback.ic_url = Some("http://localhost:8000".to_string())
+        }
     }
 
     let server_url = config.serve.host.clone() + ":" + config.serve.port.to_string().as_str();
@@ -287,13 +289,13 @@ async fn main() -> anyhow::Result<()> {
     let response_headers_to_remove = Arc::new(response_headers_to_remove);
 
     let agent = {
-        if config.callback.is_some() {
+        if let Some(callback) = &config.callback {
             let mut builder = Agent::builder();
-            if let Some(ic_url) = &config.ic_url {
+            if let Some(ic_url) = &callback.ic_url {
                 builder = builder.with_url(ic_url);
             }
             let agent = builder.build()?;
-            if config.ic_local {
+            if callback.ic_local {
                 agent.fetch_root_key().await?;
             }
             Some(agent)

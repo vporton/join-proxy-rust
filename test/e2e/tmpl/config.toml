@@ -1,10 +1,6 @@
 # Simple Bearer authentication. On IC platform you should use callback authentication instead.
 #our_secret = "<KEY>"
 
-# TODO: Move this to [callback]
-ic_local = true
-ic_url = "http://127.0.0.1:8007" # "http://localhost:8007"
-
 [serve]
 host = "local.vporton.name"
 port = 8443
@@ -13,6 +9,8 @@ cert_file = "localhost.crt"
 key_file = "localhost.decrypted.key"
 
 [callback]
+ic_local = true
+ic_url = "http://127.0.0.1:8007" # "http://localhost:8007"
 canister = "aaaaa-aa" # will be overwitten
 func = "checkRequest"
 

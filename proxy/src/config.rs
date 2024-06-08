@@ -9,6 +9,9 @@ pub struct Callback {
     #[serde(deserialize_with = "deserialize_canister_id")]
     pub canister: Principal,
     pub func: String,
+    #[serde(default="default_ic_local")]
+    pub ic_local: bool,
+    pub ic_url: Option<String>,
 }
 
 #[derive(Clone, Deserialize, Debug)]
@@ -63,9 +66,6 @@ pub struct Config {
     pub request_headers: RequestHeaders,
     pub response_headers: ResponseHeaders,
     pub upstream_timeouts: UpstreamTimeouts,
-    #[serde(default="default_ic_local")]
-    pub ic_local: bool,
-    pub ic_url: Option<String>,
     pub callback: Option<Callback>,
 }
 
