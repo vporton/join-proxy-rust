@@ -119,8 +119,9 @@ fn should_run(test: &str) -> bool {
     arguments.into_iter().any(|arg| test.contains(&arg))
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[cfg(test)]
+#[tokio::test]
+async fn test_main() -> Result<(), Box<dyn std::error::Error>> {
     let cargo_manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let tmpl_dir = cargo_manifest_dir.join("tmpl");
 
