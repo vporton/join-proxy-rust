@@ -162,7 +162,7 @@ mod tests {
             let _proxy = TemporaryChild::spawn(&mut Command::new(
                 data.test.workspace_dir.join("target").join("debug").join("joining-proxy")
             ).current_dir(data.test.dir.path()), Capture { stdout: None, stderr: None }).await.context("Running Joining Proxy")?;
-            sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
+            sleep(Duration::from_millis(2000)).await; // Wait till daemons start.
             test_calls(&dfx, "/qq", "zz", "yu").await?;
         }
         {
@@ -174,7 +174,7 @@ mod tests {
             run_successful_command(Command::new(
                 "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
             ).args(["deploy"])).await?;
-            sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
+            sleep(Duration::from_millis(2000)).await; // Wait till daemons start.
             test_calls(&dfx, "/qq", "zz", "yu").await?;
         }
         Ok(())
@@ -190,7 +190,7 @@ mod tests {
         run_successful_command(Command::new(
             "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
         ).args(["deploy"])).await?;
-        sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
+        sleep(Duration::from_millis(2000)).await; // Wait till daemons start.
 
         // data.test that varying every one of three step parameters causes Miss:
         test_calls(&dfx, "/a", "b", "c").await?;
@@ -234,7 +234,7 @@ mod tests {
         let _test_http2 = TemporaryChild::spawn(&mut Command::new(
             data.test.workspace_dir.join("target").join("debug").join("data.test-server")
         ).args(["-p", "443"]), Capture { stdout: None, stderr: None }).await.context("Running data.test HTTPS server")?;
-        sleep(Duration::from_millis(1000)).await; // Wait till daemons start.
+        sleep(Duration::from_millis(2000)).await; // Wait till daemons start.
 
         // Check https://local.vporton.name vs https://local.vporton.name:443
         let res =

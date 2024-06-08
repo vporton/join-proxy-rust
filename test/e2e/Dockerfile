@@ -47,6 +47,7 @@ COPY Cargo.toml .
 COPY dfx.json test/e2e/tmpl/
 COPY motoko test/e2e/tmpl/motoko
 COPY mops.toml test/e2e/tmpl/
+COPY .mops test/e2e/tmpl/.mops
 
 RUN cargo build -p joining-proxy
 RUN cargo build -p test-server
