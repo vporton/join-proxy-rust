@@ -2,6 +2,8 @@ TODO:
 
 - Specify proxy's identity.
 
+- Don't repeatedly ask for confirmation for the same hash.
+
 - Heavy `Vec` copy operations may hinder performance.
 
 - Make responses streaming (impossible due to caching?)
