@@ -45,7 +45,7 @@ mod tests {
         pub async fn new(base: &'a Test, additional_args: &[&str]) -> Result<Self, Box<dyn std::error::Error>> {
             // TODO: Specifying a specific port is a hack.
             run_successful_command(&mut Command::new(
-                "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
+                "/root/.local/share/dfx/bin/dfx"
             ).args([&["start", "--host", "127.0.0.1:8007", "--background"] as &[&str], additional_args].concat()).current_dir(base.dir.path()))
                 .context("Starting DFX")?;
     
@@ -55,7 +55,7 @@ mod tests {
             let port: u16 = port_str.parse().context("Parsing port number.")?;
     
             run_successful_command(Command::new(
-                "/root/.local/share/dfx/bin/dfx" // TODO: Split base.dir.path().
+                "/root/.local/share/dfx/bin/dfx"
             ).args(["deploy"]))?;
     
             let canister_ids: Value = {
