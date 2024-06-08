@@ -6,8 +6,6 @@ use async_trait::async_trait;
 #[async_trait]
 pub trait MutexGuard<T>: Deref<Target = T> /*+ DerefMut<Target = T>*/ {
     async fn set(&mut self, value: T);
-    // fn remove(&self);
-    // fn into_inner(self: Box<Self>) -> T where T: Sized + Clone; // TODO: `Clone` is bad.
     async fn inner(&self) -> T where T: Sized + Clone + std::marker::Sync; // TODO: `Clone` is bad.
 }
 
@@ -18,10 +16,6 @@ impl<T> MutexGuard<T> for tokio::sync::MutexGuard<'_, T>
     async fn set(&mut self, value: T) {
         *self.deref_mut() = value;
     }
-
-    // fn remove(&self) {
-    //     *self.deref_mut() = None;
-    // }
 
     async fn inner(&self) -> T where T: Sized + Clone + std::marker::Sync
     {
