@@ -1,6 +1,8 @@
 # Joining Proxy
 
-WARNING: It is not tested yet!
+WARNING: It is a beta version that you can use, but no warranty for it to work well.
+Also be warned that there are some security drawbacks, that one can use to drain money
+from your cycles wallet.
 
 ## What it does
 
@@ -20,7 +22,7 @@ To get started, you might want to explore the project directory structure and th
 If you want to start working on your project right away, you might want to try the following commands:
 
 ```bash
-cd join_proxy/
+cd joining_proxy/
 cargo build --release
 cargo run --release
 ```
@@ -30,7 +32,7 @@ cargo run --release
 The proxy app is called as:
 
 ```bash
-joining-proxy [--config <TOML> | -c <TOML>]
+join-proxy [--config <TOML> | -c <TOML>]
 ```
 
 where `<TOML>` is a [TOML](https://toml.io) file with configuration. By default the file `config.toml` from current directory is used.
@@ -39,11 +41,8 @@ An example of `config.toml`:
 
 ```toml
 # Simple Bearer authentication. On IC platform you should use callback authentication instead.
-# If you omit this entry, no Bearer authenticatio is done.
+# If you omit this entry, no Bearer authentication is done.
 our_secret = "<KEY>"
-
-ic_local = false # if to use a local testnet, DON'T SET THIS TO TRUE IN PRODUCTION
-ic_url = "https://localhost:8000" # URL to connect to IC (for authorization), the default value is determined by `ic_local`
 
 [serve]
 # The host and port to attach:
@@ -58,6 +57,8 @@ key_file = "..."
 # If you omit this section, no authorization by callbacks is done.
 # WARNING: In this case your proxy is eligible to unauthorized connections, such as stealing your OpenAI tokens.
 [callback]
+ic_local = false # if to use a local testnet, DON'T SET THIS TO TRUE IN PRODUCTION
+ic_url = "https://localhost:8000" # URL to connect to IC (for authorization), the default value is determined by `ic_local`
 canister = "a3shf-5eaaa-aaaaa-qaafa-cai" # the principal of the canister used for authorization
 func = "checkRequest" # the shared method used for authorization
 

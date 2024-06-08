@@ -50,7 +50,7 @@ COPY mops.toml test/e2e/tmpl/
 
 # RUN cargo build
 RUN cargo test --no-run -p e2e 
-RUN cargo build -p joining-proxy
+RUN cargo build -p join-proxy
 RUN cargo build -p test-server
 RUN export PATH=$HOME/.local/share/dfx/bin:$PATH && dfx cache install
 RUN export PATH=$HOME/.local/share/dfx/bin:$PATH && cd test/e2e/tmpl/ && mops install

@@ -1644,7 +1644,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "joining-proxy"
+name = "join-proxy"
 version = "0.0.1"
 dependencies = [
  "actix",
