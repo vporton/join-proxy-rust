@@ -57,5 +57,6 @@ RUN export PATH=$HOME/.local/share/dfx/bin:$PATH && cd test/e2e/tmpl/ && mops in
 
 ENV PATH=$HOME/.local/share/dfx/bin:$PATH
 ENV RUST_LOG=info
+ENV RUST_TEST_THREADS=1
 
 ENTRYPOINT ["/usr/bin/tini", "--", "cargo", "test", "-p", "e2e"]
