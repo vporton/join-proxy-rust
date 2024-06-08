@@ -13,9 +13,3 @@ TODO:
 - Incrementing nonce to avoid upstream request replay attack.
 
 - If the proxy is directed to its own URL, will this work as a DoS attack?
-
-- Improve tests:
-
-    - Use Docker `ENTRYPOINT` to call cargo tests.
-    
-    - Output which test is running now.
