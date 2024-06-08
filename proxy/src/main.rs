@@ -225,7 +225,6 @@ async fn proxy(
                 http_for_actix::HeaderValue::from_str("Miss").unwrap(),
             );
         }
-        // "content-length", "content-encoding" // TODO
         if config.response_headers.add_forwarded_from_header {
             if let Some(addr) = req.head().peer_addr {
                 headers.append(
