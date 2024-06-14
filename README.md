@@ -1,8 +1,8 @@
-# Joining Proxy
+# Join Proxy
 
 WARNING: It is a beta version that you can use, but no warranty for it to work well.
 Also be warned that there are some security drawbacks, that one can use to drain money
-from your cycles wallet.
+from your cycles wallet (however, it is hard for a hacker, so you probably shouldn't worry).
 
 ## What it does
 
