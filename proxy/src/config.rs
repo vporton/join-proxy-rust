@@ -26,17 +26,25 @@ pub struct UpstreamTimeouts {
 
 #[derive(Clone, Deserialize, Debug)]
 pub struct RequestHeaders {
+    #[serde(default="default_remove")]
     pub remove: Vec<String>,
+    #[serde(default="default_add")]
     pub add: Vec<(String, String)>,
+    #[serde(default="default_remove_per_host")]
     pub remove_per_host: HashMap<String, Vec<String>>,
+    #[serde(default="default_add_per_host")]
     pub add_per_host: HashMap<String, Vec<(String, String)>>,
 }
 
 #[derive(Clone, Deserialize, Debug)]
 pub struct ResponseHeaders {
+    #[serde(default="default_remove")]
     pub remove: Vec<String>,
+    #[serde(default="default_add")]
     pub add: Vec<(String, String)>,
+    #[serde(default="default_remove_per_host")]
     pub remove_per_host: HashMap<String, Vec<String>>,
+    #[serde(default="default_add_per_host")]
     pub add_per_host: HashMap<String, Vec<(String, String)>>,
     #[serde(default="default_show_hit_miss")]
     pub show_hit_miss: bool,
@@ -71,6 +79,22 @@ pub struct Config {
     pub response_headers: ResponseHeaders,
     pub upstream_timeouts: UpstreamTimeouts,
     pub callback: Option<Callback>,
+}
+
+fn default_remove() -> Vec<String> {
+    Vec::new()
+}
+
+fn default_add() -> Vec<(String, String)> {
+    Vec::new()
+}
+
+fn default_remove_per_host() -> HashMap<String, Vec<String>> {
+    HashMap::new()
+}
+
+fn default_add_per_host() -> HashMap<String, Vec<(String, String)>> {
+    HashMap::new()
 }
 
 fn default_host() -> String {
