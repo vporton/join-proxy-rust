@@ -1,7 +1,3 @@
-FIXME:
-
-- The added request headers should be per-host.
-
 TODO:
 
 - Specify proxy's identity.
@@ -17,3 +13,5 @@ TODO:
 - Incrementing nonce to avoid upstream request replay attack.
 
 - If the proxy is directed to its own URL, will this work as a DoS attack?
+
+- Test: `add_per_host`, `remove_per_host`.

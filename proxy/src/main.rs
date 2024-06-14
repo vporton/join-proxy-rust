@@ -105,16 +105,40 @@ fn obtain_upstream_base_url(req: &actix_web::HttpRequest) -> anyhow::Result<Stri
 }
 
 async fn prepare_request(req: &actix_web::HttpRequest, url: String, body: &web::Bytes, config: &Data<Config>, state: &Data<State>)
-    -> MyResult<reqwest::Request>
+    -> MyResult<(reqwest::Request, String)>
 {
+    let uri = http::Uri::from_str(url.as_str())?;
+    let host = uri.host().ok_or_else(|| anyhow!("no host"))?;
+    // TODO: a wrong preliminary optimization below:
     let request_headers = req.headers().into_iter()
         .map(|h| (h.0.clone(), h.1.clone()))
         .filter(|h|
             !config.request_headers.remove.contains(&h.0.to_string()) ||
                 h.0 == http_for_actix::HeaderName::from_static("host"))
+        .filter(|h|
+            if let Some(headers) = config.as_ref().request_headers.remove_per_host.get(host) {
+                !headers.contains(&h.0.to_string())
+            } else {
+                true
+            }
+        )
         .chain(
             state.as_ref().additional_response_headers.iter().map(|h| (h.0.clone(), h.1.clone()))
-        );
+        )
+        .chain({
+            if let Some(headers) = config.as_ref().request_headers.add_per_host.get(host) {
+                headers.into_iter().map(|(k, v)| -> MyResult<(http_for_actix::HeaderName, http_for_actix::HeaderValue)> {
+                    Ok(
+                        (
+                            http_for_actix::HeaderName::from_str(k.as_str()).map_err(|_| InvalidHeaderNameError::default())?,
+                            http_for_actix::HeaderValue::from_str(v.as_str()).map_err(|_| InvalidHeaderValueError::default())?,
+                        )
+                    )
+                }).collect::<MyResult<Vec<_>>>()?
+            } else {
+                vec![]
+            }.into_iter()
+        });
     
     let method = reqwest::Method::from_bytes(req.method().as_str().as_bytes())?;
     let headers = http::HeaderMap::from_iter(
@@ -122,14 +146,14 @@ async fn prepare_request(req: &actix_web::HttpRequest, url: String, body: &web::
             .map(|h| -> MyResult<_> {
                 Ok((
                     http::HeaderName::from_str(h.0.as_str()).map_err(|_| InvalidHeaderNameError::default())?,
-                    http::HeaderValue::from_str(h.1.to_str()?).map_err(|_| InvalidHeaderValueError::default())?
+                    http::HeaderValue::from_str(h.1.to_str()?).map_err(|_| InvalidHeaderValueError::default())?,
                 ))
             })
             .into_iter()
             .collect::<MyResult<Vec<_>>>()?
     );
     let builder = state.client.request(method, url).headers(headers).body(Vec::from(body.as_ref()));
-    Ok(builder.build()?)
+    Ok((builder.build()?, host.to_string()))
 }
 
 async fn proxy(
@@ -199,7 +223,7 @@ async fn proxy(
         }
 
         let base_url = obtain_upstream_base_url(&req)?;
-        let reqwest = prepare_request(&req, base_url + path, &body, &config, &state).await?;
+        let (reqwest, host) = prepare_request(&req, base_url + path, &body, &config, &state).await?;
         let reqwest_response = state.client.execute(reqwest).await?;
         info!("Upstream status: {}", reqwest_response.status());
         let status = reqwest_response.status().as_u16();
@@ -236,11 +260,24 @@ async fn proxy(
         for k in state.response_headers_to_remove.iter() {
             headers.remove(k);
         }
+        if let Some(remove) = config.response_headers.remove_per_host.get(&host) {
+            for k in remove.into_iter() {
+                headers.remove(k);
+            }
+        }
         for (k, v) in config.response_headers.add.iter() {
             headers.append(
                 http_for_actix::HeaderName::from_str(k).map_err(|_| InvalidHeaderNameError::default())?,
                 http_for_actix::HeaderValue::from_str(&v).map_err(|_| InvalidHeaderValueError::default())?
             );
+        }
+        if let Some(add) = config.response_headers.add_per_host.get(&host) {
+            for (k, v) in add.into_iter() {
+                headers.append(
+                    http_for_actix::HeaderName::from_str(k).map_err(|_| InvalidHeaderNameError::default())?,
+                    http_for_actix::HeaderValue::from_str(&v).map_err(|_| InvalidHeaderValueError::default())?
+                );
+            }
         }
 
         // let response_body: Vec<u8> = Vec::from(bytes);

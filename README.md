@@ -75,11 +75,15 @@ total_timeout = "60s" # total timeout from request start to request end
 [request_headers]
 remove = ["X-Proxy"] # remove these headers 
 add = [["Authorization", "Bearer <OPENAI-API-KEY>"]] # add headers
+add_per_host = {"api.openai.com": [["Authorization", "Bearer <OPENAI-API-KEY>"]]}
+remove_per_host = {"api.openai.com": ["X-Proxy"]}
 
 # Modify headers in responses (e.g. to IC) from our proxy.
 [response_headers]
 remove = ["Cookie"] # remove these headers
 add = [["Cookie", "userId=789"]] # add these headers
+add_per_host = {}
+remove_per_host = {}
 show_hit_miss = false # false by default. Add `X-JoinProxy-Response: [Hit | Miss]` header
 add_forwarded_from_header = false # Add `X-Forwarded-From` useless but widespread HTTP header to the response
 ```

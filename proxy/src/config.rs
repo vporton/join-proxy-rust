@@ -2,7 +2,7 @@ use ic_agent::export::Principal;
 use serde::Deserializer;
 use serde_derive::Deserialize;
 use serde::de::Error;
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 
 #[derive(Clone, Deserialize, Debug)]
 pub struct Callback {
@@ -28,12 +28,16 @@ pub struct UpstreamTimeouts {
 pub struct RequestHeaders {
     pub remove: Vec<String>,
     pub add: Vec<(String, String)>,
+    pub remove_per_host: HashMap<String, Vec<String>>,
+    pub add_per_host: HashMap<String, Vec<(String, String)>>,
 }
 
 #[derive(Clone, Deserialize, Debug)]
 pub struct ResponseHeaders {
     pub remove: Vec<String>,
     pub add: Vec<(String, String)>,
+    pub remove_per_host: HashMap<String, Vec<String>>,
+    pub add_per_host: HashMap<String, Vec<(String, String)>>,
     #[serde(default="default_show_hit_miss")]
     pub show_hit_miss: bool,
     #[serde(default="default_add_forwarded_from_header")]

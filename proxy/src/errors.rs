@@ -36,6 +36,8 @@ pub enum MyError {
     Candid(candid::Error),
     #[error("IC agent error: {0}")]
     Agent(AgentError),
+    #[error("Invalid URI: {0}")]
+    InvalidUri(http::uri::InvalidUri),
 }
 
 #[derive(Debug, Default, Error)]
