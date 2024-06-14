@@ -1,6 +1,6 @@
 FIXME:
 
-- The added request headers should be per-host (otherwise can steal them directing to hacker's host?)
+- The added request headers should be per-host.
 
 TODO:
 
