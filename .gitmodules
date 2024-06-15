@@ -1,0 +1,3 @@
+[submodule "motoko"]
+	path = motoko
+	url = https://github.com/vporton/join-proxy-motoko
