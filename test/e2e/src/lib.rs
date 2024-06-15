@@ -46,20 +46,21 @@ mod tests {
             // TODO: Specifying a specific port is a hack.
             run_successful_command(&mut Command::new(
                 "/root/.local/share/dfx/bin/dfx"
-            ).args([&["start", "--host", "127.0.0.1:8007", "--background"] as &[&str], additional_args].concat()).current_dir(base.dir.path()))
+            ).args([&["start", "--host", "127.0.0.1:8007", "--background"] as &[&str], additional_args].concat())
+                .current_dir(base.dir.path().join("motoko")))
                 .context("Starting DFX")?;
     
             let port_str = read_to_string(
-                base.dir.path().join(".dfx").join("network").join("local").join("webserver-port"),
+                base.dir.path().join("motoko").join(".dfx").join("network").join("local").join("webserver-port"),
             ).context("Reading port.")?;
             let port: u16 = port_str.parse().context("Parsing port number.")?;
     
             run_successful_command(Command::new(
                 "/root/.local/share/dfx/bin/dfx"
-            ).args(["deploy"]))?;
+            ).args(["deploy"]).current_dir(base.dir.path().join("motoko")))?;
     
             let canister_ids: Value = {
-                let dir = base.dir.path().join(".dfx").join("local").join("canister_ids.json");
+                let dir = base.dir.path().join("motoko").join(".dfx").join("local").join("canister_ids.json");
                 let file = File::open(dir).with_context(|| format!("Opening canister_ids.json"))?;
                 serde_json::from_reader(file).expect("Error parsing JSON")
             };
@@ -88,7 +89,7 @@ mod tests {
         fn drop(&mut self) {
             run_successful_command(&mut Command::new(
                 "/root/.local/share/dfx/bin/dfx"
-            ).args(["stop"]).current_dir(self.base.dir.path()))
+            ).args(["stop"]).current_dir(self.base.dir.path().join("motoko")))
                 .context("Stopping DFX").expect("can't stop DFX");
         }
     }
@@ -144,7 +145,7 @@ mod tests {
             ).current_dir(mytest.test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
             run_successful_command(Command::new(
                 "/root/.local/share/dfx/bin/dfx"
-            ).args(["deploy"]))?;
+            ).args(["deploy"]).current_dir(mytest.test.dir.path().join("motoko")))?;
             test_calls(&dfx, "/qq", "zz", "yu").await?;
             drop(dfx);
             drop(mytest);
@@ -157,7 +158,7 @@ mod tests {
             ).current_dir(mytest.test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
             run_successful_command(Command::new(
                 "/root/.local/share/dfx/bin/dfx"
-            ).args(["deploy"]))?;
+            ).args(["deploy"]).current_dir(mytest.test.dir.path().join("motoko")))?;
             test_calls(&dfx, "/qq", "zz", "yu").await?;
             drop(dfx);
             drop(mytest);
@@ -174,7 +175,7 @@ mod tests {
         ).current_dir(mytest.test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
         run_successful_command(Command::new(
             "/root/.local/share/dfx/bin/dfx"
-        ).args(["deploy"]))?;
+        ).args(["deploy"]).current_dir(mytest.test.dir.path().join("motoko")))?;
 
         // Test that varying every one of three step parameters causes Miss:
         test_calls(&dfx, "/a", "b", "c").await?;
@@ -218,7 +219,7 @@ mod tests {
         ).current_dir(mytest.test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
         run_successful_command(Command::new(
             "/root/.local/share/dfx/bin/dfx"
-        ).args(["deploy"]))?;
+        ).args(["deploy"]).current_dir(mytest.test.dir.path().join("motoko")))?;
         let _test_http2 = TemporaryChild::spawn(&mut Command::new(
             mytest.test.workspace_dir.join("target").join("debug").join("test-server")
         ).args(["-p", "443"]), Capture { stdout: None, stderr: None }).context("Running mytest.test HTTPS server")?;

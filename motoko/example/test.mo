@@ -1,4 +1,4 @@
-import Http "../";
+import Http "../src";
 import Call "canister:call";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";

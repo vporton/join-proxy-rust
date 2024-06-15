@@ -2,11 +2,11 @@
   "canisters": {
     "call": {
       "type": "motoko",
-      "main": "motoko/example/call.mo"
+      "main": "example/call.mo"
     },
     "test": {
       "type": "motoko",
-      "main": "motoko/example/test.mo",
+      "main": "example/test.mo",
       "dependencies": ["call"]
     }
   },

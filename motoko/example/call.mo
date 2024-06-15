@@ -1,5 +1,5 @@
-import Http "../";
-import Types "../HttpTypes";
+import Http "../src";
+import Types "../src/HttpTypes";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
 import Cycles "mo:base/ExperimentalCycles";
