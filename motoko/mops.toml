@@ -1,5 +1,5 @@
 [package]
-name = "joinproxy_lib"
+name = "joinproxy"
 version = "1.0.0"
 description = "Utilities to use IC together with Joining Proxy"
 repository = "https://github.com/vporton/joining-proxy-rust"

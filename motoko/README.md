@@ -1,4 +1,4 @@
-# joinproxy_lib
+# joinproxy-lib
 
 This is a Motoko library for using with Join Proxy.
 
