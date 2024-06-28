@@ -20,6 +20,8 @@ It has special support for [Internet Computer](https://internetcomputer.org/), n
 IC to authenticate every request. This makes a malicious replica unable for example to steal your OpenAI tokens.
 And my solution is far less expensive than using tECDSA would be.
 
+It caches requests in memory. Optional Redis backend and more performance optimizations will be added after I get a grant.
+
 ## Welcome
 
 First run `git submodule init`, because due to MOPS package manager non-support for packages in a subdirectory
