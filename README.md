@@ -13,7 +13,8 @@ Thus you, for example, pay 13x less for OpenAI tokens, if IC is connected to it 
 this proxy. It also helps against reaching API throttling.
 
 It has special support for [Internet Computer](https://internetcomputer.org/), namely it can ask
-IC to authenticate every request.
+IC to authenticate every request. This makes a malicious replica unable for example to steal your OpenAI tokens.
+And my solution is far less expensive than using tECDSA would be.
 
 ## Welcome
 
