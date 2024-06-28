@@ -27,7 +27,7 @@ It caches requests in memory. Optional Redis backend and more performance optimi
 First run `git submodule init`, because due to MOPS package manager non-support for packages in a subdirectory
 we need to make `motoko/` a separate repository.
 
-To get started, you might want to explore the project directory structure and the default configuration file..
+To get started, you might want to explore the project directory structure and the default configuration file.
 
 If you want to start working on your project right away, you might want to try the following commands:
 
