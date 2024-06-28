@@ -1,8 +1,12 @@
 # Join Proxy
 
-WARNING: It is a beta version that you can use, but no warranty for it to work well.
+WARNING: It is a beta version that you can use, but no warranty.
+
 Also be warned that there are some security drawbacks, that one can use to drain money
 from your cycles wallet (however, it is hard for a hacker, so you probably shouldn't worry).
+
+It has been tested positively in a real dapp ([Zon](https://docs.zoncircle.com)) to channel AI
+requests to both OpenAI and Pinecone.
 
 ## What it does
 
@@ -13,14 +17,18 @@ Thus you, for example, pay 13x less for OpenAI tokens, if IC is connected to it 
 this proxy. It also helps against reaching API throttling.
 
 It has special support for [Internet Computer](https://internetcomputer.org/), namely it can ask
-IC to authenticate every request.
+IC to authenticate every request. This makes a malicious replica unable for example to steal your OpenAI tokens.
+And my solution is far less expensive than using tECDSA would be.
+
+It caches requests in memory. Optional Redis backend and more performance optimizations will be added after I get a grant.
+(Code for switching alternating between several backends is already present.)
 
 ## Welcome
 
 First run `git submodule init`, because due to MOPS package manager non-support for packages in a subdirectory
 we need to make `motoko/` a separate repository.
 
-To get started, you might want to explore the project directory structure and the default configuration file..
+To get started, you might want to explore the project directory structure and the default configuration file.
 
 If you want to start working on your project right away, you might want to try the following commands:
 
