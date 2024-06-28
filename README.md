@@ -21,6 +21,7 @@ IC to authenticate every request. This makes a malicious replica unable for exam
 And my solution is far less expensive than using tECDSA would be.
 
 It caches requests in memory. Optional Redis backend and more performance optimizations will be added after I get a grant.
+(Code for switching alternating between several backends is already present.)
 
 ## Welcome
 
