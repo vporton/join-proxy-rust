@@ -4,7 +4,7 @@ use super::lockable_map::MutexGuard;
 use crate::errors::MyResult;
 
 #[async_trait]
-pub trait Cache<K, V> {
+pub trait Cache<K, V>: Sync + Send {
     // type Guard<'a>: MutexGuard<Option<V>> where Self: 'a, V: 'a;
 
     // async fn lock<'a>(&'a mut self, key: &K) -> MyResult<Self::Guard<'a>> where V: 'a;
@@ -12,4 +12,5 @@ pub trait Cache<K, V> {
 
     // async fn put(&mut self, key: K, value: V) -> MyResult<()>;
 }
-// pub type BinaryCache = dyn Cache<Vec<u8>, Vec<u8>>;
+
+pub type BinaryCache = dyn Cache<Vec<u8>, Vec<u8>>;

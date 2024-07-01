@@ -9,7 +9,7 @@ use rustls::ServerConfig;
 use rustls_pemfile::{certs, pkcs8_private_keys};
 use actix_web::{http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
 use anyhow::{anyhow, Context};
-use cache::{cache::Cache, mem_cache::BinaryMemCache};
+use cache::{cache::{BinaryCache, Cache}, mem_cache::BinaryMemCache};
 use clap::Parser;
 use errors::{InvalidHeaderNameError, InvalidHeaderValueError, MyCorruptedDBError, MyResult};
 use reqwest::ClientBuilder;
@@ -303,7 +303,8 @@ async fn main() -> anyhow::Result<()> {
 
     let server_url = config.serve.host.clone() + ":" + config.serve.port.to_string().as_str();
 
-    let cache = Arc::new(Mutex::new(Box::new(BinaryMemCache::new(config.cache.cache_timeout))));
+    let cache =
+        Arc::new(Mutex::new(Box::<BinaryCache>::from(Box::new(BinaryMemCache::new(config.cache.cache_timeout)))));
 
     let additional_response_headers = &config.request_headers.add;
     let additional_response_headers = additional_response_headers.into_iter().map(
