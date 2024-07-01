@@ -101,6 +101,9 @@ add_forwarded_from_header = false # Add `X-Forwarded-From` useless but widesprea
 
 ## Testing
 
+**Warning:** It needs an IPv6-enabled computer to test (the Docker container uses IPv6 internally
+because HTTPS outcalls support only IPv6).
+
 For a E2E test, run:
 ```
 docker buildx build -t test -f test/e2e/Dockerfile .
