@@ -13,7 +13,6 @@ derive_more = "0.99.17"
 http = "1.1.0"
 http_for_actix = { version = "0.2.11", package = "http" }
 log = "0.4.21"
-reqwest = { version = "0.12.4", features = ["default-tls", "http2", "macos-system-configuration"] }
 serde = "1.0.201"
 serde_derive = "1.0.201"
 serde_json = "1.0.117"
@@ -28,5 +27,7 @@ toml = "0.8.13"
 rustls = "0.23.7"
 rustls-pemfile = "2.1.2"
 env_logger = "0.11.3"
+diesel = { version = "2.3.2", features = ["postgres", "chrono", "uuid", "r2d2", "32-column-tables"] }
+reqwest = { version = "0.12.23", features = ["http2", "default-tls", "charset", "cookies", "gzip", "brotli", "zstd", "deflate", "json", "multipart", "stream", "system-proxy"] }
 # lock_api = "0.4.12"
 # future-parking_lot = "0.3.3"
