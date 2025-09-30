@@ -46,7 +46,7 @@ mod tests {
             // TODO: Specifying a specific port is a hack.
             run_successful_command(&mut Command::new(
                 "/root/.local/share/dfx/bin/dfx"
-            ).args([&["start", "--host", "127.0.0.1:8007", "--background"] as &[&str], additional_args].concat())
+            ).args([&["start", "--host", "127.0.0.1:8007", "--background", "--clean"] as &[&str], additional_args].concat())
                 .current_dir(base.dir.path().join("motoko")))
                 .context("Starting DFX")?;
     
@@ -152,7 +152,7 @@ mod tests {
         }
         {
             let mytest = MyTest::new().await?;
-            let dfx = OurDFX::new(&mytest.test, &["--artificial-delay", "5000", "--clean"]).await?;
+            let dfx = OurDFX::new(&mytest.test, &["--artificial-delay", "5000"]).await?;
             let _proxy = TemporaryChild::spawn(&mut Command::new(
                 mytest.test.workspace_dir.join("target").join("debug").join("join-proxy")
             ).current_dir(mytest.test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
@@ -169,7 +169,7 @@ mod tests {
     #[tokio::test]
     async fn test_loading_new() -> Result<(), Box<dyn std::error::Error>> {
         let mytest = MyTest::new().await?;
-        let dfx = OurDFX::new(&mytest.test, &["--artificial-delay", "0", "--clean"]).await?; // --artificial-delay just to speed up tests
+        let dfx = OurDFX::new(&mytest.test, &["--artificial-delay", "0"]).await?; // --artificial-delay just to speed up tests
         let _proxy = TemporaryChild::spawn(&mut Command::new(
             mytest.test.workspace_dir.join("target").join("debug").join("join-proxy")
         ).current_dir(mytest.test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;
@@ -213,7 +213,7 @@ mod tests {
     #[tokio::test]
     async fn test_port_443() -> Result<(), Box<dyn std::error::Error>> {
         let mytest = MyTest::new().await?;
-        let dfx = OurDFX::new(&mytest.test, &["--artificial-delay", "0", "--clean"]).await?; // --artificial-delay just to speed up tests
+        let dfx = OurDFX::new(&mytest.test, &["--artificial-delay", "0"]).await?; // --artificial-delay just to speed up tests
         let _proxy = TemporaryChild::spawn(&mut Command::new(
             mytest.test.workspace_dir.join("target").join("debug").join("join-proxy")
         ).current_dir(mytest.test.dir.path()), Capture { stdout: None, stderr: None }).context("Running Joining Proxy")?;

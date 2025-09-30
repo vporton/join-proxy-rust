@@ -5,12 +5,12 @@ WORKDIR /usr/src/myapp
 ENV DFXVM_INIT_YES=true
 RUN curl -fsSL https://internetcomputer.org/install.sh | sh
 ENV PATH=$HOME/.local/share/dfx/bin:$PATH
-RUN $HOME/.local/share/dfx/bin/dfxvm default 0.20.0
+#RUN $HOME/.local/share/dfx/bin/dfxvm default 0.20.0
 
 RUN apt-get update
 RUN apt-get install -y openssl npm libunwind8 tini
 
-RUN npm i -g ic-mops
+RUN npm i -g ic-mops@1.11.1
 
 COPY test/e2e/localhost.ext .
 
