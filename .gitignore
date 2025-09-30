@@ -16,6 +16,7 @@
 
 # rust
 target/
+.diesel_lock
 
 # frontend code
 node_modules/
