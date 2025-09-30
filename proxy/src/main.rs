@@ -160,7 +160,7 @@ async fn proxy(
     req: actix_web::HttpRequest,
     body: web::Bytes,
     config: Data<Config>,
-    cache: Data<Arc<tokio::sync::Mutex<Box<BinaryMemCache>>>>,
+    cache: Data<Arc<tokio::sync::Mutex<Box<BinaryCache>>>>,
     state: Data<State>, 
 )
     -> MyResult<actix_web::HttpResponse<Vec<u8>>>
