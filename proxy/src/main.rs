@@ -5,7 +5,7 @@ mod config;
 use std::{collections::{btree_map::Entry, BTreeMap}, fs::{read_to_string, File}, io::BufReader, str::{from_utf8, FromStr}, sync::Arc};
 
 use log::info;
-use rustls::ServerConfig;
+use rustls::{crypto::{ring, CryptoProvider}, ServerConfig};
 use rustls_pemfile::{certs, pkcs8_private_keys};
 use actix_web::{http::StatusCode, web::{self, Data}, App, HttpResponse, HttpServer};
 use anyhow::{anyhow, Context};
@@ -302,6 +302,9 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let server_url = config.serve.host.clone() + ":" + config.serve.port.to_string().as_str();
+
+    ring::default_provider().install_default().unwrap();
+
 
     let cache =
         Arc::new(Mutex::new(Box::<BinaryCache>::from(Box::new(BinaryMemCache::new(config.cache.cache_timeout)))));
